@@ -10,6 +10,12 @@
   },
   "dependencies": {
     "@prisma/client": "^6.0.1",
+    "@radix-ui/react-slot": "^1.1.1",
+    "@web3auth/base": "^9.4.5",
+    "@web3auth/default-evm-adapter": "^9.4.5",
+    "@web3auth/ethereum-provider": "^9.4.5",
+    "@web3auth/modal": "^9.4.5",
+    "@web3auth/modal-react-hooks": "^9.4.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
@@ -17,7 +23,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^2.5.5",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "viem": "^2.21.55"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
