@@ -50,7 +50,7 @@ export default function DisplayChat({
 
     return () => clearTimeout(timeoutId);
   }, []);
-  g;
+
   useEffect(() => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop =
