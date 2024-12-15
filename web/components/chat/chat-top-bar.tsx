@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import { Avatar, AvatarImage } from "../ui/avatar";
 // import { UserData } from "@/app/data";
@@ -29,7 +30,7 @@ export default function ChatTopbar({ name }: ChatTopbarProps) {
         </Avatar>
         <div className="flex flex-col">
           <span className="font-medium">{name}</span>
-          <span className="text-xs">Active 2 mins ago</span>
+          {/* <span className="text-xs">Active 2 mins ago</span> */}
         </div>
       </div>
 
