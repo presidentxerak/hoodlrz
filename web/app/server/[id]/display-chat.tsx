@@ -41,6 +41,17 @@ export default function DisplayChat({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop =
+          messagesContainerRef.current.scrollHeight;
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
+  g;
+  useEffect(() => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop =
         messagesContainerRef.current.scrollHeight;
@@ -90,7 +101,7 @@ export default function DisplayChat({
                 className="flex flex-col gap-2 p-4"
               >
                 <ChatBubble variant={variant}>
-                  <ChatBubbleAvatar src={message.user.evmAddress} />
+                  <ChatBubbleAvatar src={message.user.avatarImg} />
                   {/* <ChatBubbleMessage isLoading={message.isLoading}> */}
                   <ChatBubbleMessage>
                     {message.content}
