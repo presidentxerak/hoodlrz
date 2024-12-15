@@ -4,6 +4,7 @@ import "./globals.css";
 import { Web3AuthProvider } from "@/context/web3auth-context";
 import { UserProvider } from "@/context/user-context";
 import Login from "./login";
+import Header from "@/components/header/header";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,11 +29,14 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen w-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen w-screen overflow-hidden`}
       >
         <Web3AuthProvider>
           <UserProvider>
-            <Login>{children}</Login>
+            <Login>
+              <Header />
+              {children}
+            </Login>
           </UserProvider>
         </Web3AuthProvider>
       </body>

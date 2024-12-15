@@ -26,8 +26,19 @@ export async function getOwnedIds(address: string) {
       args: [address, i],
     });
 
-    ids.push(id);
+    ids.push(Number(id));
   }
 
   return ids;
+}
+
+export async function isOwnerOfId(address: string, id: number) {
+  const owner = await publicClient.readContract({
+    address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
+    abi: ABI.abi,
+    functionName: "ownerOf",
+    args: [id],
+  });
+
+  return owner === address;
 }

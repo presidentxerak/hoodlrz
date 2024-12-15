@@ -18,6 +18,7 @@ model Server {
 
 model User {
   id             String         @id @default(cuid())
+  avatarImg      String         @default("https://cdn.discordapp.com/embed/avatars/0.png")
   evmAddress     String         @unique
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt

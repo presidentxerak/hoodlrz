@@ -18,10 +18,15 @@ import { Web3Auth, Web3AuthOptions } from "@web3auth/modal";
 import type { UserInfo } from "@web3auth/base";
 import RPC from "@/utils/viem-rpc";
 
+import { getOwnedIds } from "@/contract/read-contract";
+import { createUser } from "@/actions/create-user";
+import { createServer } from "@/actions/create-server";
+
 // Définir le type pour le contexte
 interface Web3AuthContextType {
   provider: IProvider | null;
   loggedIn: boolean;
+  address: string;
   login: () => Promise<void>;
   logout: () => Promise<void>;
   getUserInfo: () => Promise<Partial<UserInfo>>;
@@ -65,6 +70,7 @@ const web3AuthOptions: Web3AuthOptions = {
 const web3auth = new Web3Auth(web3AuthOptions);
 
 export const Web3AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [address, setAddress] = useState<string>("");
   const [provider, setProvider] = useState<IProvider | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
 
@@ -81,7 +87,17 @@ export const Web3AuthProvider = ({ children }: { children: ReactNode }) => {
         setProvider(web3auth.provider);
         console.log("Web3Auth initialized", web3auth.provider);
 
-        if (web3auth.connected) setLoggedIn(true);
+        if (web3auth.connected) {
+          setLoggedIn(true);
+          if (web3auth.provider) {
+            const address = (await RPC.getAccounts(web3auth.provider)) as [
+              string
+            ];
+            if (address[0]) {
+              setAddress(address[0]);
+            }
+          }
+        }
       } catch (error) {
         console.error(error);
       }
@@ -93,10 +109,23 @@ export const Web3AuthProvider = ({ children }: { children: ReactNode }) => {
     const web3authProvider = await web3auth.connect();
     setProvider(web3authProvider);
     setLoggedIn(web3auth.connected);
+    if (web3authProvider) {
+      const address = (await RPC.getAccounts(web3authProvider)) as [string];
+      setAddress(address[0]);
+      if (address[0]) {
+        await createUser(address[0]);
+        const ownedIds = await getOwnedIds(address[0]);
+        for (const id of ownedIds) {
+          console.log(id);
+          await createServer(Number(id));
+        }
+      }
+    }
   };
 
   const logout = async () => {
     await web3auth.logout();
+    setAddress("");
     setProvider(null);
     setLoggedIn(false);
   };
@@ -160,6 +189,7 @@ export const Web3AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         provider,
         loggedIn,
+        address,
         login,
         logout,
         getUserInfo,
