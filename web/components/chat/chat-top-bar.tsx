@@ -35,7 +35,7 @@ export default function ChatTopbar({ name }: ChatTopbarProps) {
       </div>
 
       <div className="flex gap-1">
-        {TopbarIcons.map((icon, index) => (
+        {/* {TopbarIcons.map((icon, index) => (
           <Link
             key={index}
             href="#"
@@ -46,7 +46,7 @@ export default function ChatTopbar({ name }: ChatTopbarProps) {
           >
             <icon.icon size={20} className="text-muted-foreground" />
           </Link>
-        ))}
+        ))} */}
       </div>
     </ExpandableChatHeader>
   );
