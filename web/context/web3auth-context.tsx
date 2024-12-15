@@ -16,7 +16,7 @@ import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
 import { getDefaultExternalAdapters } from "@web3auth/default-evm-adapter";
 import { Web3Auth, Web3AuthOptions } from "@web3auth/modal";
 import type { UserInfo } from "@web3auth/base";
-import RPC from "@/utils/viem-rpc";
+import { RPC } from "@/utils/viem-rpc";
 
 import { getOwnedIds } from "@/contract/read-contract";
 import { createUser } from "@/actions/create-user";

@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import Sidebar from "@/components/sidebar";
 import { Prisma } from "@prisma/client";
 // import Chat from "./chat";
-import { Chat } from "../chat/chat";
+// import { Chat } from "../chat/chat";
 
 type ServersWithMessages = Prisma.ServerGetPayload<{
   include: {
@@ -103,7 +103,7 @@ export function ServerLayout({
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={defaultLayout[1]} minSize={30}>
-        <Chat messages={servers[0].messages} isMobile={isMobile} />
+        {/* <Chat messages={servers[0].messages} isMobile={isMobile} /> */}
       </ResizablePanel>
     </ResizablePanelGroup>
   );

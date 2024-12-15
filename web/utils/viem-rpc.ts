@@ -129,10 +129,12 @@ const signMessage = async (provider: IProvider): Promise<unknown> => {
   }
 };
 
-export default {
+const RPC = {
   getChainId,
   getAccounts,
   getBalance,
   sendTransaction,
   signMessage,
 };
+
+export { RPC };
