@@ -48,7 +48,7 @@ const clientId =
 
 const chainConfig = {
   chainNamespace: CHAIN_NAMESPACES.EIP155,
-  chainId: "0x2B03",
+  chainId: "0x2b03",
   rpcTarget: "https://sepolia.shape.network",
   displayName: "Shape Sepolia",
   blockExplorerUrl: "https://explorer-sepolia.shape.network",

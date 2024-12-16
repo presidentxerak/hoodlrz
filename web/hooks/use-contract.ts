@@ -2,8 +2,11 @@ import { useWeb3Auth } from "@/context/web3auth-context";
 import { useEffect, useState } from "react";
 import { createWalletClient, custom, Client, WalletClient } from "viem";
 import { publicClient } from "@/contract/public-client";
-import { shape } from "viem/chains";
+import { shapeSepolia } from "viem/chains";
 import ABI from "@/abi/HoodlrzVerse.json";
+import prisma from "@/lib/prisma";
+import { getOwnedIds } from "@/contract/read-contract";
+import { createServer } from "@/actions/create-server";
 
 type GetBalanceResponse = {
   balance: number;
@@ -20,7 +23,7 @@ export function useContract() {
       if (provider) {
         const walletClient = createWalletClient({
           transport: custom(provider),
-          chain: shape,
+          chain: shapeSepolia,
         });
         if (walletClient) {
           setClient(walletClient);
@@ -47,10 +50,37 @@ export function useContract() {
     return { balance: Number(balance), isError: false };
   };
 
+  const mint = async (address: string) => {
+    if (!client) return;
+    const simulation = await publicClient.simulateContract({
+      address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
+      abi: ABI.abi,
+      functionName: "mint",
+      args: [address],
+      account: address as `0x${string}`,
+    });
+
+    const txHash = await client.writeContract(simulation.request);
+
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash: txHash,
+    });
+
+    const ids = await getOwnedIds(address);
+
+    for (const id of ids) {
+      console.log(id);
+      await createServer(Number(id));
+    }
+
+    console.log(receipt);
+  };
+
   return {
     provider,
     client,
     address,
     getBalance,
+    mint,
   };
 }

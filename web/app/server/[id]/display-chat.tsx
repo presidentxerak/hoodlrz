@@ -106,7 +106,9 @@ export default function DisplayChat({
                   <ChatBubbleMessage>
                     {message.content}
                     {message.createdAt && (
-                      <ChatBubbleTimestamp timestamp={formattedTime} />
+                      <ChatBubbleTimestamp
+                        timestamp={`${message.user.evmAddress} ${formattedTime}`}
+                      />
                     )}
                   </ChatBubbleMessage>
                   <ChatBubbleActionWrapper>
