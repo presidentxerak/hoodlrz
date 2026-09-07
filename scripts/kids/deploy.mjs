@@ -68,32 +68,15 @@ const CH = CHAINS[which];
 
 const fail = (msg) => { throw new Error(msg); };
 
-/** Chemin relatif au depot, quelle que soit la machine. */
-const relPath = (p) => p.replace(process.cwd() + '/', '');
-
-/**
- * Remplace les chemins ABSOLUS par des chemins relatifs au depot dans
- * l'entree standard JSON.
- *
- * evm.mjs reecrit tous les imports en chemins absolus pour que solc n'ait
- * rien a resoudre. Utile a la compilation, genant a la publication : les
- * cles porteraient alors l'arborescence de la machine qui a compile, ce
- * qui est a la fois inutile et indiscret sur un explorateur public.
- *
- * Les cles ET les imports sont reecrits ensemble : les seconds doivent
- * continuer a designer les premieres, sinon l'explorateur ne recompile
- * plus rien.
+/*
+ * Note sur les chemins de sources. evm.mjs reecrit tous les imports en
+ * chemins absolus pour que solc n'ait rien a resoudre. On a d'abord
+ * voulu les rendre relatifs avant publication, par discretion : mais
+ * ces chemins entrent dans les metadonnees que solc grave en fin de
+ * bytecode, et l'entree « propre » ne recompile plus le bytecode
+ * deploye. L'explorateur la refusait. On publie donc l'entree telle
+ * qu'elle a compile.
  */
-function normaliseInput(input) {
-  const map = Object.fromEntries(Object.keys(input.sources).map((k) => [k, relPath(k)]));
-  const sources = {};
-  for (const [abs, rel] of Object.entries(map)) {
-    let content = input.sources[abs].content;
-    for (const [a, r] of Object.entries(map)) content = content.split(a).join(r);
-    sources[rel] = { content };
-  }
-  return { ...input, sources };
-}
 
 /**
  * Interroge le RPC une fois, a la main, avant de laisser ethers s'en
@@ -225,7 +208,14 @@ async function main() {
   // jamais y arriver.
   mkdirSync('kids/build/verify', { recursive: true });
   for (const [name, art] of Object.entries(built)) {
-    const input = normaliseInput(art.input);
+    // L'entree EXACTE qui a produit le bytecode, chemins absolus compris.
+    // Le compilateur grave les chemins des sources dans les metadonnees
+    // en fin de bytecode : une entree aux chemins « propres » recompile
+    // en un bytecode dont la fin differe, et l'explorateur la refuse.
+    // Le prix est que les chemins du poste de deploiement apparaitront
+    // dans le code source publie. C'est cosmetique, et c'est la seule
+    // entree qui verifie.
+    const input = art.input;
     // Deux fichiers par contrat. Le premier enveloppe l'entree avec la
     // version du compilateur et le nom de source : c'est ce que lit
     // kids:verify-contracts. Le second est l'entree standard NUE, telle
@@ -234,7 +224,7 @@ async function main() {
     // language ».
     writeFileSync(`kids/build/verify/${name}.json`, JSON.stringify({
       solcVersion: art.solcVersion,
-      sourceName: relPath(art.sourceName),
+      sourceName: art.sourceName,
       input,
     }, null, 2));
     writeFileSync(`kids/build/verify/${name}.input.json`, JSON.stringify(input, null, 2));
