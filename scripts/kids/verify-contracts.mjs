@@ -144,7 +144,17 @@ for (const c of cibles) {
 
   process.stdout.write(`  ${c.name.padEnd(22)} envoi…`);
   try {
-    const r = await fetch(url, { method: 'POST', body, signal: AbortSignal.timeout(60000) });
+    // L'explorateur mainnet est derriere une protection anti-robots qui
+    // renvoie une page HTML 403 aux clients sans identite de navigateur.
+    const r = await fetch(url, {
+      method: 'POST',
+      body,
+      signal: AbortSignal.timeout(60000),
+      headers: {
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36',
+        accept: 'application/json',
+      },
+    });
     const txt = await r.text();
     let j = null;
     try { j = JSON.parse(txt); } catch { /* Blockscout repond parfois en texte */ }
@@ -157,7 +167,8 @@ for (const c of cibles) {
       const deja = /already verified/i.test(txt);
       console.log(`\r  ${c.name.padEnd(22)} ${deja ? 'DEJA VERIFIE' : 'ECHEC'}   HTTP ${r.status}`);
       if (!deja) {
-        console.log(`  ${''.padEnd(22)}        ${(j?.message ?? txt).slice(0, 180)}`);
+        const html = /^\s*<!doctype html/i.test(txt);
+        console.log(`  ${''.padEnd(22)}        ${html ? 'page HTML renvoyee : acces API refuse (protection anti-robots)' : (j?.message ?? txt).slice(0, 180)}`);
         echecs++;
       }
     }
@@ -177,5 +188,23 @@ chaque contrat pour voir le resultat.
   renderer  ${base}/address/${dep.renderer}#code
   NFT       ${base}/address/${dep.nft}#code
 `);
+
+if (echecs) {
+  // Le meme fichier se depose a la main dans le formulaire de
+  // l'explorateur : c'est exactement ce que l'API aurait recu.
+  const art = JSON.parse(readFileSync(`kids/build/verify/${CONTRATS[0].name}.json`, 'utf8'));
+  console.log(`A la main, si l API refuse : sur chaque page ci-dessus, onglet Contract,
+bouton « Verify & publish », methode « Solidity (Standard JSON input) ».
+
+  compilateur   v${art.solcVersion.split('+')[0]}+commit.${art.solcVersion.split('commit.')[1]?.split('.')[0]}
+  licence       MIT
+  fichier       kids/build/verify/<Contrat>.json
+  arguments     laisser la detection automatique, ou coller :
+`);
+  for (const c of cibles) {
+    console.log(`    ${c.name.padEnd(22)} ${c.ctor === '0x' ? '(aucun)' : c.ctor}`);
+  }
+  console.log('');
+}
 
 process.exit(echecs ? 1 : 0);
