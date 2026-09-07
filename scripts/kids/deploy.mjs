@@ -285,8 +285,22 @@ async function main() {
       return at(name, state[key]);
     }
     const f = new ContractFactory(built[name].abi, built[name].bytecode, wallet);
-    const c = await f.deploy(...ctorArgs);
-    await c.waitForDeployment();
+    // Meme retard de noeud que pour les autres envois : juste apres le
+    // contrat precedent, un noeud peut encore proposer l'ancien nonce.
+    let c;
+    for (let i = 1; ; i++) {
+      try {
+        c = await f.deploy(...ctorArgs);
+        await c.waitForDeployment();
+        break;
+      } catch (e) {
+        const msg = String(e.message ?? e);
+        const nonce = /nonce/i.test(msg) && /(already|too low|used|replacement)/i.test(msg);
+        if (!nonce || i >= 5) throw e;
+        console.log(`  nonce en decalage entre les noeuds RPC, nouvel essai ${i}/4 dans 6 s…`);
+        await new Promise((r) => setTimeout(r, 6000));
+      }
+    }
     state[key] = await c.getAddress();
     state.deployedAt ??= new Date().toISOString();
     save();
