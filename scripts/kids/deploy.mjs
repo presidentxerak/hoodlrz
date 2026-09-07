@@ -350,9 +350,34 @@ async function main() {
     console.log(`Televersement de ${manifest.storedBytes.toLocaleString('fr')} o en ${total} morceaux`);
   }
 
+  /**
+   * Envoie une transaction et attend son inclusion, en reessayant sur
+   * une erreur de nonce.
+   *
+   * Un fournisseur RPC repartit les requetes sur plusieurs noeuds. Quand
+   * l'un d'eux n'a pas encore vu la transaction precedente, il propose
+   * le meme nonce, et le reseau repond « nonce has already been used ».
+   * Rien n'est perdu - la premiere transaction est bien partie - mais le
+   * script s'arretait la. On attend que les noeuds se rejoignent et on
+   * recommence ; l'etat lu sur la chaine, lui, reste la seule verite.
+   */
+  const tx = async (fn, tries = 5) => {
+    for (let i = 1; ; i++) {
+      try {
+        return await (await fn()).wait();
+      } catch (e) {
+        const msg = String(e.message ?? e);
+        const nonce = /nonce/i.test(msg) && /(already|too low|used|replacement)/i.test(msg);
+        if (!nonce || i >= tries) throw e;
+        console.log(`  nonce en decalage entre les noeuds RPC, nouvel essai ${i}/${tries - 1} dans 6 s…`);
+        await new Promise((r) => setTimeout(r, 6000));
+      }
+    }
+  };
+
   let gasTotal = 0n;
   const send = async (isPre, data, label) => {
-    const rc = await (await engine.appendChunk(isPre, data)).wait();
+    const rc = await tx(() => engine.appendChunk(isPre, data));
     gasTotal += rc.gasUsed;
     console.log(`  ${label}  ${((data.length - 2) / 2).toLocaleString('fr')} o  gas ${rc.gasUsed.toLocaleString('fr')}`);
   };
@@ -376,7 +401,7 @@ async function main() {
   if (await engine.sealed_()) {
     console.log('Moteur deja scelle\n');
   } else {
-    await (await engine.seal(artifactSha)).wait();
+    await tx(() => engine.seal(artifactSha));
     state.artifactSha256 = artifactSha;
     state.storedBytes = manifest.storedBytes;
     save();
@@ -392,7 +417,9 @@ async function main() {
   } else {
     while (minted < RESERVE) {
       const qty = Math.min(LOT, RESERVE - minted);
-      await (await kids.mintReserve(reserveTo, qty)).wait();
+      await tx(() => kids.mintReserve(reserveTo, qty));
+      // Relu sur la chaine, jamais additionne localement : si un essai a
+      // reussi malgre l'erreur, le compteur le sait et on ne double pas.
       minted = Number(await kids.reserveMinted());
       console.log(`  reserve ${minted}/${RESERVE} -> ${reserveTo}`);
     }
