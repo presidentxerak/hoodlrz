@@ -375,25 +375,73 @@ async function main() {
     }
   };
 
-  let gasTotal = 0n;
-  const send = async (isPre, data, label) => {
-    const rc = await tx(() => engine.appendChunk(isPre, data));
-    gasTotal += rc.gasUsed;
-    console.log(`  ${label}  ${((data.length - 2) / 2).toLocaleString('fr')} o  gas ${rc.gasUsed.toLocaleString('fr')}`);
+  /**
+   * Relit une valeur jusqu'a ce qu'elle satisfasse la condition, ou que
+   * le delai passe. Meme cause que pour tx() : un noeud en retard peut
+   * renvoyer l'etat d'AVANT la transaction dont on vient d'attendre le
+   * recu. Conclure sur une seule lecture ferait passer ce retard pour un
+   * moteur corrompu - et arreter un deploiement sain.
+   */
+  const settled = async (read, pred, timeoutMs = 30_000) => {
+    const t0 = Date.now();
+    let v = await read();
+    while (!pred(v) && Date.now() - t0 < timeoutMs) {
+      await new Promise((r) => setTimeout(r, 2500));
+      v = await read();
+    }
+    return v;
   };
-  for (let i = Number(donePre); i < preChunks.length; i++) await send(true, preChunks[i], `pre  ${i}`);
-  for (let i = Number(donePost); i < postChunks.length; i++) await send(false, postChunks[i], `post ${i}`);
+  const counts = async () => (await engine.chunkCounts()).map(Number);
+
+  const corrompu = (why) => fail(
+    `${why}\n\n` +
+    `Le moteur est append-only : un morceau en trop ou dans le desordre\n` +
+    `ne se corrige pas, et il n'est pas scelle, donc rien n'est perdu.\n` +
+    `Repartir de contrats neufs :\n\n` +
+    `    rm ${stateFile}\n` +
+    `    npm run kids:deploy -- --${which}\n`
+  );
+
+  if (Number(donePre) > preChunks.length || Number(donePost) > postChunks.length) {
+    corrompu(`La chaine porte ${donePre} + ${donePost} morceaux, or l'artefact en compte ` +
+             `${preChunks.length} + ${postChunks.length}.`);
+  }
+
+  // Le televersement est pilote par le compteur SUR LA CHAINE, pas par
+  // une boucle locale : apres chaque envoi, on attend que le compteur
+  // avance d'exactement un. S'il n'avance pas, c'est un retard de noeud
+  // ou un echec ; s'il saute, un morceau est parti deux fois.
+  let gasTotal = 0n;
+  const upload = async (isPre, chunks, label) => {
+    let n = (await counts())[isPre ? 0 : 1];
+    while (n < chunks.length) {
+      const data = chunks[n];
+      const rc = await tx(() => engine.appendChunk(isPre, data));
+      gasTotal += rc.gasUsed;
+      console.log(`  ${label} ${n}  ${((data.length - 2) / 2).toLocaleString('fr')} o  gas ${rc.gasUsed.toLocaleString('fr')}`);
+      const seen = (await settled(counts, (c) => c[isPre ? 0 : 1] >= n + 1))[isPre ? 0 : 1];
+      if (seen !== n + 1) {
+        corrompu(`Apres l'envoi du morceau ${label} ${n}, la chaine en compte ${seen} au lieu de ${n + 1}.`);
+      }
+      n = seen;
+    }
+  };
+  await upload(true, preChunks, 'pre ');
+  await upload(false, postChunks, 'post');
   if (gasTotal > 0n) console.log(`  gas total ${(Number(gasTotal) / 1e6).toFixed(1)} M\n`);
 
   /* ---- 3. Verification AVANT scellement ---------------------------- */
   // Le scellement est irreversible. On relit ce que la chaine renvoie
-  // reellement et on le compare a l'artefact local.
+  // reellement et on le compare a l'artefact local - en laissant aux
+  // noeuds le temps de se rejoindre avant de crier au loup.
   const probe = '0x' + 'ab'.repeat(32);
-  const onChain = await engine.documentFor(probe);
   const local = readFileSync('kids/engine/frozen.html', 'utf8').replace('__HASH__', probe);
+  const onChain = await settled(() => engine.documentFor(probe), (d) => d === local);
   if (onChain !== local) {
-    fail(`Le document reconstitue differe de l artefact local ` +
-         `(${onChain.length} vs ${local.length} caracteres). ARRET AVANT SCELLEMENT.`);
+    const [cp, cq] = await counts();
+    corrompu(`Le document reconstitue differe de l'artefact local ` +
+             `(${onChain.length.toLocaleString('fr')} vs ${local.length.toLocaleString('fr')} caracteres, ` +
+             `${cp} + ${cq} morceaux sur la chaine). ARRET AVANT SCELLEMENT.`);
   }
   console.log('Document reconstitue identique a l artefact gele');
 
@@ -418,9 +466,11 @@ async function main() {
     while (minted < RESERVE) {
       const qty = Math.min(LOT, RESERVE - minted);
       await tx(() => kids.mintReserve(reserveTo, qty));
-      // Relu sur la chaine, jamais additionne localement : si un essai a
-      // reussi malgre l'erreur, le compteur le sait et on ne double pas.
-      minted = Number(await kids.reserveMinted());
+      // Relu sur la chaine, jamais additionne localement, et en laissant
+      // aux noeuds le temps de se rejoindre : un compteur lu en retard
+      // ferait renvoyer le meme lot, que le contrat refuserait.
+      const want = minted + qty;
+      minted = Number(await settled(() => kids.reserveMinted(), (m) => Number(m) >= want));
       console.log(`  reserve ${minted}/${RESERVE} -> ${reserveTo}`);
     }
   }
