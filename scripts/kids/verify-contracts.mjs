@@ -145,8 +145,10 @@ for (const c of cibles) {
   process.stdout.write(`  ${c.name.padEnd(22)} envoi…`);
   try {
     // L'explorateur mainnet est derriere une protection anti-robots qui
-    // renvoie une page HTML 403 aux clients sans identite de navigateur.
-    const r = await fetch(url, {
+    // renvoie une page HTML 403 aux clients sans identite de navigateur,
+    // et limite le debit : trois envois a la suite valent un 429. On
+    // espace, et on reessaie sur 429 apres une pause.
+    const envoyer = () => fetch(url, {
       method: 'POST',
       body,
       signal: AbortSignal.timeout(60000),
@@ -155,6 +157,12 @@ for (const c of cibles) {
         accept: 'application/json',
       },
     });
+    let r = await envoyer();
+    for (let essai = 1; r.status === 429 && essai <= 3; essai++) {
+      process.stdout.write(`\r  ${c.name.padEnd(22)} debit limite, nouvel essai ${essai}/3 dans 30 s…`);
+      await new Promise((res) => setTimeout(res, 30_000));
+      r = await envoyer();
+    }
     const txt = await r.text();
     let j = null;
     try { j = JSON.parse(txt); } catch { /* Blockscout repond parfois en texte */ }
@@ -177,6 +185,8 @@ for (const c of cibles) {
     echecs++;
   }
   console.log('');
+  // Un envoi a la fois par tranche de dix secondes : sous la limite.
+  if (c !== cibles[cibles.length - 1]) await new Promise((res) => setTimeout(res, 10_000));
 }
 
 console.log(`
