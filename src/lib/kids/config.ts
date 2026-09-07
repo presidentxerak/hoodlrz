@@ -5,12 +5,12 @@
  * source unique partagee avec les scripts de deploiement : une date
  * changee la-bas se propage ici sans recopie.
  *
- * Les adresses de contrats passent par des variables d'environnement
- * parce qu'elles ne sont connues qu'apres deploiement, et qu'elles
- * different entre testnet et mainnet.
+ * L'adresse du contrat vient du meme fichier, section « deployments »,
+ * choisie selon la chaine ; une variable d'environnement peut la forcer.
  */
 
 import raw from "../../../kids/config.json";
+const kidsConfig = raw as typeof raw & { deployments?: unknown };
 
 export const KIDS = {
   name: raw.collection.name,
@@ -115,8 +115,22 @@ export const KIDS_CHAIN = {
   currency: { name: "Ether", symbol: "ETH", decimals: 18 },
 } as const;
 
-/** Adresse du contrat. Vide tant que rien n'est deploye. */
-export const KIDS_ADDRESS = process.env.NEXT_PUBLIC_KIDS_ADDRESS ?? "";
+/**
+ * Adresse du contrat NFT.
+ *
+ * Lue dans kids/config.json, section « deployments », que kids:deploy
+ * remplit et qui est versionnee : la page de mint pointe ainsi vers le
+ * contrat reellement deploye sans qu'une variable d'environnement ait a
+ * etre posee sur l'hebergeur - une etape de plus, un jour de mint, est
+ * une occasion de plus de pointer vers le mauvais contrat. La variable
+ * reste possible pour forcer une autre adresse (test, preview).
+ */
+type Deployments = Record<string, { nft?: string | null } | string[] | undefined>;
+const deployed = (kidsConfig.deployments as Deployments | undefined)?.[String(KIDS_CHAIN.id)];
+const DEPLOYED_ADDRESS =
+  deployed && !Array.isArray(deployed) && typeof deployed.nft === "string" ? deployed.nft : "";
+
+export const KIDS_ADDRESS = process.env.NEXT_PUBLIC_KIDS_ADDRESS ?? DEPLOYED_ADDRESS;
 
 export const isDeployed = () => /^0x[a-fA-F0-9]{40}$/.test(KIDS_ADDRESS);
 

@@ -28,6 +28,8 @@ import {
   PHASES,
   PHASE_ISO,
   KIDS_CHAIN,
+  KIDS_ADDRESS,
+  isDeployed,
   fmtDate,
   fmtDateTime,
   phaseAt,
@@ -485,6 +487,24 @@ function Details() {
             <span className="text-right text-sm font-bold text-foreground">{value}</span>
           </div>
         ))}
+        {isDeployed() && (
+          // L'adresse est ce qu'un collectionneur doit pouvoir verifier
+          // lui-meme : elle mene a l'explorateur, ou le code source est
+          // publie, pas a une page a nous.
+          <div className="flex items-center justify-between gap-6 border-t border-[var(--border)] pt-3">
+            <span className="text-xs font-bold uppercase tracking-widest text-muted">
+              Contract
+            </span>
+            <a
+              href={`${KIDS_CHAIN.explorerUrl}/address/${KIDS_ADDRESS}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="break-all text-right font-mono text-xs font-bold text-foreground underline decoration-white/30 underline-offset-4 hover:decoration-white"
+            >
+              {KIDS_ADDRESS}
+            </a>
+          </div>
+        )}
       </div>
     </section>
   );
