@@ -208,7 +208,7 @@ bouton « Verify & publish », methode « Solidity (Standard JSON input) ».
 
   compilateur   v${art.solcVersion.split('+')[0]}+commit.${art.solcVersion.split('commit.')[1]?.split('.')[0]}
   licence       MIT
-  fichier       kids/build/verify/<Contrat>.json
+  fichier       kids/build/verify/<Contrat>.input.json   (le .input.json, pas l autre)
   arguments     laisser la detection automatique, ou coller :
 `);
   for (const c of cibles) {

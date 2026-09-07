@@ -225,11 +225,19 @@ async function main() {
   // jamais y arriver.
   mkdirSync('kids/build/verify', { recursive: true });
   for (const [name, art] of Object.entries(built)) {
+    const input = normaliseInput(art.input);
+    // Deux fichiers par contrat. Le premier enveloppe l'entree avec la
+    // version du compilateur et le nom de source : c'est ce que lit
+    // kids:verify-contracts. Le second est l'entree standard NUE, telle
+    // que l'attend le formulaire de l'explorateur quand on la depose a
+    // la main - lui donner l'enveloppe se solde par « missing field
+    // language ».
     writeFileSync(`kids/build/verify/${name}.json`, JSON.stringify({
       solcVersion: art.solcVersion,
       sourceName: relPath(art.sourceName),
-      input: normaliseInput(art.input),
+      input,
     }, null, 2));
+    writeFileSync(`kids/build/verify/${name}.input.json`, JSON.stringify(input, null, 2));
   }
 
   const manifest = JSON.parse(readFileSync('kids/build/engine-manifest.json', 'utf8'));
