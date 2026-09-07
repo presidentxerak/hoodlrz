@@ -49,6 +49,25 @@ const ok = (label, cond, detail = '') => {
 };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Lecture qui laisse au fournisseur RPC le temps de se mettre d'accord
+ * avec lui-meme. Derriere une seule URL, Alchemy repartit les requetes
+ * sur plusieurs noeuds, et l'un d'eux peut ne pas avoir encore vu la
+ * transaction dont on vient pourtant d'attendre le recu. Lire une fois et
+ * conclure ferait passer ce retard pour un bug de contrat. On relit donc
+ * jusqu'a obtenir la valeur attendue, avec une limite : au-dela, c'est un
+ * vrai desaccord et on le rapporte tel quel.
+ */
+async function settled(read, want, timeoutMs = 20_000) {
+  const t0 = Date.now();
+  let seen = await read();
+  while (seen !== want && Date.now() - t0 < timeoutMs) {
+    await wait(2000);
+    seen = await read();
+  }
+  return seen;
+}
+
 /* ---- Connexion ---------------------------------------------------- */
 const cfg = JSON.parse(readFileSync('kids/config.json', 'utf8'));
 const dep = cfg.deployments?.[CH.id];
@@ -126,7 +145,8 @@ const others = Array.from({ length: 116 }, (_, i) =>
   '0x' + keccak256(toUtf8Bytes(`holder-de-test-${i}`)).slice(26));
 const tree = buildTree([wallet.address, ...others]);
 await (await nft.setAllowlistRoot(tree.root)).wait();
-ok('racine posee', (await nft.allowlistRoot()) === tree.root, `${tree.addresses.length} adresses`);
+ok('racine posee', (await settled(() => nft.allowlistRoot(), tree.root)) === tree.root,
+   `${tree.addresses.length} adresses`);
 
 const proof = proofFor(tree, leafOf(wallet.address));
 ok('preuve calculee', proof.length > 0, `profondeur ${proof.length}`);
@@ -137,7 +157,8 @@ const now = Math.floor(Date.now() / 1000);
 const AL = now + 45, PUB = AL + STEP, END = PUB + STEP;
 await (await nft.setPhases(AL, PUB, END)).wait();
 ok('phases posees',
-   Number(await nft.allowlistStart()) === AL && Number(await nft.mintEnd()) === END,
+   (await settled(() => nft.mintEnd(), BigInt(END))) === BigInt(END) &&
+   Number(await nft.allowlistStart()) === AL,
    `allowlist +45 s, public +${(PUB - now) / 60} min, fin +${(END - now) / 60} min`);
 
 const until = async (ts, label) => {
@@ -161,7 +182,8 @@ process.stdout.write('\r');
 
 const before = Number(await nft.totalMinted());
 await (await nft.mintAllowlist(2, proof)).wait();
-ok('2 pieces mintees en allowlist', Number(await nft.totalMinted()) === before + 2);
+ok('2 pieces mintees en allowlist',
+   (await settled(() => nft.totalMinted(), BigInt(before + 2))) === BigInt(before + 2));
 ok('une preuve invalide est refusee',
    await refuses(() => nft.mintAllowlist(1, proof.slice(1))));
 
@@ -170,9 +192,10 @@ console.log('\n4. Mint public');
 await until(PUB + 5, 'ouverture publique');
 process.stdout.write('\r');
 await (await nft.mintPublic(3)).wait();
-ok('3 pieces mintees en public', Number(await nft.totalMinted()) === before + 5);
-ok('plafond de 10 par wallet respecte',
-   Number(await nft.minted(wallet.address)) === 5, `${await nft.minted(wallet.address)} / 10`);
+ok('3 pieces mintees en public',
+   (await settled(() => nft.totalMinted(), BigInt(before + 5))) === BigInt(before + 5));
+const perWallet = await settled(() => nft.minted(wallet.address), 5n);
+ok('plafond de 10 par wallet respecte', perWallet === 5n, `${perWallet} / 10`);
 ok('un 6e lot depassant le plafond est refuse',
    await refuses(() => nft.mintPublic(6)));
 
@@ -190,7 +213,13 @@ await until(END + 5, 'fin de fenetre');
 process.stdout.write('\r');
 
 await (await nft.startReveal()).wait();
-const rb = Number(await nft.revealBlock());
+// Ici on ne connait pas la valeur attendue : on attend seulement qu'elle
+// cesse d'etre nulle.
+let rb = 0;
+for (let i = 0; i < 10 && rb === 0; i++) {
+  rb = Number(await nft.revealBlock());
+  if (rb === 0) await wait(2000);
+}
 ok('engagement pose sur un bloc futur', rb > 0, `bloc parent ${rb}`);
 ok('cloture refusee tant que le bloc n existe pas', await refuses(() => nft.finishReveal()));
 
@@ -212,7 +241,11 @@ for (let i = 0; ; i++) {
 }
 process.stdout.write('\r');
 await (await nft.finishReveal()).wait();
-const seed = await nft.seedBase();
+let seed = '0x' + '0'.repeat(64);
+for (let i = 0; i < 10 && /^0x0+$/.test(seed); i++) {
+  seed = await nft.seedBase();
+  if (/^0x0+$/.test(seed)) await wait(2000);
+}
 ok('graine posee', /^0x[0-9a-f]{64}$/.test(seed) && seed !== '0x' + '0'.repeat(64), seed.slice(0, 18) + '…');
 ok('seconde cloture refusee', await refuses(() => nft.finishReveal()));
 ok('second engagement refuse', await refuses(() => nft.startReveal()));
