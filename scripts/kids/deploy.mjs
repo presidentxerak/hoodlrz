@@ -251,6 +251,20 @@ async function main() {
   // sur la chaine avec sa reserve, orphelin ; c'est le prix d'un
   // changement de regle apres deploiement, et il est dit ici.
   if (has('--new-nft') && state.nft) {
+    // Un redeploiement n'a de sens que si le code a change. Relancer la
+    // meme commande deux fois creerait deux collections identiques, avec
+    // deux reserves mintees - c'est arrive. On compare donc le bytecode
+    // en place a celui qu'on s'apprete a deployer, et on refuse s'ils
+    // sont identiques.
+    const enPlace = (await provider.getCode(state.nft)).toLowerCase();
+    if (enPlace === built.HoodlrzKids.deployedBytecode.toLowerCase()) {
+      fail(
+        `--new-nft refuse : le contrat de collection en place (${state.nft})\n` +
+        `a deja exactement le code des sources actuelles. Le redeployer\n` +
+        `creerait une collection identique en double, avec une seconde\n` +
+        `reserve mintee. Rien a faire.`
+      );
+    }
     console.log(`--new-nft : l'ancien NFT ${state.nft} est abandonne, moteur et renderer repris.\n`);
     state.previousNft = [...(state.previousNft ?? []), state.nft];
     delete state.nft;
