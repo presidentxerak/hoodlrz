@@ -268,10 +268,10 @@ if (NFT) {
   const seedBase = await nft.seedBase();
   const nowSec = Math.floor(Date.now() / 1000);
   const mintOuvert = alStart !== 0 && nowSec < mintEnd;
-  if (alStart === 0) {
-    note('renderer pas encore verrouille', 'lockRenderer() apres validation du rendu');
-  } else if (rendererLocked) {
+  if (rendererLocked) {
     ok('renderer verrouille', true);
+  } else if (alStart === 0) {
+    note('renderer pas encore verrouille', 'lockRenderer() apres validation du rendu');
   } else if (which === 'testnet') {
     note('renderer non verrouille', 'attendu sur testnet : la repetition ne le pose pas');
   } else {
