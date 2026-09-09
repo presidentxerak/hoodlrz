@@ -57,7 +57,7 @@
       "explorer": "https://robinhoodchain.blockscout.com",
       "engine": "0x31c0D2f7400e987d29eEeC54EcB5228eA1194DA8",
       "renderer": "0x17F77Da0c8aAc042349aC437D8164cB9a86c85ee",
-      "nft": "0x0e0641553F0d022014862Bb1845aBA3eC1A60113",
+      "nft": "0xa01D7990ee7edaf4B9526c39afB17f4a966b0905",
       "royaltyReceiver": "0x2606C3Ea4cFb66c467b57DEa7a2117d6905ca143",
       "reserveReceiver": "0x2606C3Ea4cFb66c467b57DEa7a2117d6905ca143",
       "artifactSha256": "0xe3c896eb39c5bbb6e1767fb84d6688a31d8fca3d5b7c9b78dba271f3088d3bca",
