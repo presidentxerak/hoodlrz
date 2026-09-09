@@ -57,7 +57,7 @@
       "explorer": "https://robinhoodchain.blockscout.com",
       "engine": "0x31c0D2f7400e987d29eEeC54EcB5228eA1194DA8",
       "renderer": "0x17F77Da0c8aAc042349aC437D8164cB9a86c85ee",
-      "nft": "0x4411192CB58FC79f0C6AF5B398f4aEDF9B51ceCF",
+      "nft": "0x0e0641553F0d022014862Bb1845aBA3eC1A60113",
       "royaltyReceiver": "0x2606C3Ea4cFb66c467b57DEa7a2117d6905ca143",
       "reserveReceiver": "0x2606C3Ea4cFb66c467b57DEa7a2117d6905ca143",
       "artifactSha256": "0xe3c896eb39c5bbb6e1767fb84d6688a31d8fca3d5b7c9b78dba271f3088d3bca",
@@ -66,13 +66,13 @@
     "46630": {
       "network": "Robinhood Chain Testnet",
       "explorer": "https://explorer.testnet.chain.robinhood.com",
-      "engine": "0x979703d08651ACc088a93806aF4A0c207653f2D5",
-      "renderer": "0xD80e88DAE1543391ADc8B4157E8ac10513D4c8f7",
-      "nft": "0x070115AB5b55F640BC92936242aEC489C4214773",
+      "engine": "0x31111CeD0AA9Fafe2e1fC706aF9bec4e5BCD3eCB",
+      "renderer": "0xfD415096A95eF1c5F9A0f0cB74bd83aB474A2B28",
+      "nft": "0x6Cc10D9BCfb6b6Bf27d818224B111356F2E924Be",
       "royaltyReceiver": "0x2606C3Ea4cFb66c467b57DEa7a2117d6905ca143",
       "reserveReceiver": "0x2606C3Ea4cFb66c467b57DEa7a2117d6905ca143",
       "artifactSha256": "0xe3c896eb39c5bbb6e1767fb84d6688a31d8fca3d5b7c9b78dba271f3088d3bca",
-      "deployedAt": "2026-09-07T08:07:03.597Z"
+      "deployedAt": "2026-09-09T07:09:12.571Z"
     },
     "_note": "Adresses des contrats deployes, par chain ID. Ecrit par kids:deploy."
   }
