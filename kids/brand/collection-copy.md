@@ -50,6 +50,12 @@ which token to keep.
 **Nobody picks the seed either.** The reveal is a two-step call that
 anyone can make: commit to a block that does not exist yet, then read its
 hash once it does. Whoever presses the button cannot know the outcome.
+The creator announces the reveal date — thirty days after the mint ends
+at most. Past that, anyone can trigger it.
+
+**The mint ends when it ends.** Sell-out, or the creator closing it.
+Pieces left unminted never exist: the collection settles at what was
+actually claimed.
 
 3,333 pieces · free mint · 10 per wallet · 300 reserved for the creator,
 minted before anyone else. OG Hoodlrz holders mint first, decided by a

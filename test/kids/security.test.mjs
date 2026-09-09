@@ -290,6 +290,93 @@ section('M-1. Phases et racine ne bougent plus une fois le mint ouvert');
 }
 
 /* ================================================================== *
+ * Pouvoirs du createur ajoutes apres la revue : fermer, dater
+ * ================================================================== */
+section('Fermeture anticipee et date de revelation, sans prise sur la graine');
+{
+  const chain = await createChain();
+  const T0 = Number(chain.now);
+  const { nft } = await fresh(chain);
+  const { AL, PUB, END } = await openMint(chain, nft, T0);
+
+  ok('closeMint refuse avant l ouverture', (await nft.expectRevert('closeMint')) === 'PhasesLocked');
+  chain.warpTo(PUB + 60);
+  await nft.call('mintPublic', [10], { from: ACCOUNTS.ALICE });
+  ok('closeMint refuse a un tiers',
+     (await nft.expectRevert('closeMint', [], { from: ACCOUNTS.ALICE })) === 'OwnableUnauthorizedAccount');
+
+  // La date de revelation se pose avant la fermeture, bornee a 30 jours
+  // apres la fin de fenetre encore prevue.
+  ok('date de revelation trop lointaine refusee',
+     (await nft.expectRevert('setRevealAfter', [END + 31 * DAY])) === 'RevealDateTooFar');
+
+  // Fermeture : le mint s'arrete a l'instant, la supply est reduite de fait.
+  await nft.call('closeMint');
+  ok('mintEnd ramene a maintenant', (await nft.call('mintEnd')) === chain.now);
+  ok('mint refuse des la fermeture',
+     (await nft.expectRevert('mintPublic', [1], { from: ACCOUNTS.BOB })) === 'MintClosed');
+  ok('supply reelle = pieces mintees', (await nft.call('totalMinted')) === 310n);
+  ok('closeMint ne rouvre rien : setPhases toujours refuse',
+     (await nft.expectRevert('setPhases', [AL, PUB, END])) === 'PhasesLocked');
+
+  // Le createur choisit le jour : avant, personne ne peut engager.
+  const revealAt = Number(chain.now) + 7 * DAY;
+  await nft.call('setRevealAfter', [revealAt]);
+  ok('engagement refuse avant la date choisie',
+     (await nft.expectRevert('startReveal', [], { from: ACCOUNTS.CAROL })) === 'RevealTooEarly');
+  ok('...y compris par le createur', (await nft.expectRevert('startReveal')) === 'RevealTooEarly');
+  chain.warpTo(revealAt);
+  await nft.call('startReveal', [], { from: ACCOUNTS.CAROL });
+  ok('engagement ouvert a tous des la date', (await nft.call('revealBlock')) > 0n);
+  ok('la date ne se change plus une fois engage',
+     (await nft.expectRevert('setRevealAfter', [revealAt + DAY])) === 'SeedAlreadySet');
+  chain.mineBlocks(DELAY + 1);
+  await nft.call('finishReveal', [], { from: ACCOUNTS.BOB });
+  ok('graine posee', (await nft.call('seedBase')) !== ZERO32);
+}
+
+{
+  // Le createur ne peut pas retenir la collection : passe 30 jours apres
+  // la fin, la date qu'il a choisie ne compte plus.
+  const chain = await createChain();
+  const T0 = Number(chain.now);
+  const { nft } = await fresh(chain);
+  const { PUB, END } = await openMint(chain, nft, T0);
+  chain.warpTo(PUB + 60);
+  await nft.call('closeMint');
+  const closedAt = Number(chain.now);
+  await nft.call('setRevealAfter', [closedAt + 30 * DAY]);   // le maximum
+  chain.warpTo(closedAt + 30 * DAY - 10);
+  ok('encore refuse juste avant', (await nft.expectRevert('startReveal', [], { from: ACCOUNTS.BOB })) === 'RevealTooEarly');
+  chain.warpTo(closedAt + 30 * DAY);
+  await nft.call('startReveal', [], { from: ACCOUNTS.BOB });
+  ok('30 jours apres la fermeture, n importe qui engage', (await nft.call('revealBlock')) > 0n);
+  ok('END d origine sans effet : la fermeture fait foi', END > closedAt);
+}
+
+{
+  // Sold-out avant la fin de fenetre : le delai court depuis le sold-out.
+  const chain = await createChain();
+  const T0 = Number(chain.now);
+  const { nft } = await fresh(chain);
+  const { PUB } = await openMint(chain, nft, T0);
+  chain.warpTo(PUB + 60);
+  const { createAddressFromString } = await import('@ethereumjs/util');
+  for (let i = 0; i * 10 < 3033; i++) {
+    const a = createAddressFromString('0x' + (i + 1).toString(16).padStart(40, '0'));
+    await nft.call('mintPublic', [Math.min(10, 3033 - i * 10)], { from: a });
+  }
+  ok('soldOutAt enregistre', (await nft.call('soldOutAt')) === chain.now);
+  ok('date de revelation bornee depuis le sold-out',
+     (await nft.expectRevert('setRevealAfter', [Number(chain.now) + 31 * DAY])) === 'RevealDateTooFar');
+  await nft.call('setRevealAfter', [Number(chain.now) + 3 * DAY]);
+  ok('refuse avant', (await nft.expectRevert('startReveal')) === 'RevealTooEarly');
+  chain.warpTo(Number(chain.now) + 3 * DAY);
+  await nft.call('startReveal');
+  ok('accepte a la date', (await nft.call('revealBlock')) > 0n);
+}
+
+/* ================================================================== *
  * M-2  Verrou du renderer conditionne au moteur scelle
  * ================================================================== */
 section('M-2. lockRenderer exige un moteur scelle et un renderer reel');

@@ -89,6 +89,9 @@ const ABI = [
   'function mintPublic(uint256)',
   'function startReveal()',
   'function finishReveal()',
+  'function closeMint()',
+  'function setRevealAfter(uint64)',
+  'function revealAfter() view returns (uint64)',
   'function revealBlock() view returns (uint256)',
   'function REVEAL_DELAY() view returns (uint256)',
   'function lockRenderer()',
@@ -207,9 +210,24 @@ ok('setPhases refuse pendant le mint', await refuses(() => nft.setPhases(AL, PUB
 ok('setAllowlistRoot refuse pendant le mint', await refuses(() => nft.setAllowlistRoot(tree.root)));
 
 /* ---- 5. Revelation, en deux temps ---------------------------------- */
-console.log('\n5. Revelation de la graine');
+console.log('\n5. Fermeture par le createur, puis date de revelation');
 ok('engagement refuse pendant le mint', await refuses(() => nft.startReveal()));
-await until(END + 5, 'fin de fenetre');
+// Plutot que d'attendre la fin de fenetre, on ferme : c'est le geste
+// que fera le createur si la collection ne part pas entierement.
+await (await nft.closeMint()).wait();
+let closedEnd = END;
+for (let i = 0; i < 10 && closedEnd >= END; i++) {
+  closedEnd = Number(await nft.mintEnd());
+  if (closedEnd >= END) await wait(2000);
+}
+ok('mint ferme a l instant', closedEnd <= Math.floor(Date.now() / 1000) + 60 && closedEnd < END, `mintEnd ${closedEnd}`);
+ok('mint refuse apres fermeture', await refuses(() => nft.mintPublic(1)));
+
+const revealAt = Math.floor(Date.now() / 1000) + 45;
+await (await nft.setRevealAfter(revealAt)).wait();
+ok('date de revelation posee', Number(await settled(() => nft.revealAfter(), BigInt(revealAt))) === revealAt);
+ok('engagement refuse avant la date', await refuses(() => nft.startReveal()));
+await until(revealAt + 5, 'date de revelation');
 process.stdout.write('\r');
 
 await (await nft.startReveal()).wait();

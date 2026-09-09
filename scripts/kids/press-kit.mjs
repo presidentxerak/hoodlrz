@@ -105,7 +105,7 @@ const schedule = [
   ['Holder snapshot', fmtT(P.snapshotParis), 'Every wallet holding an OG Hoodlrz at this block enters the allowlist.'],
   ['Allowlist mint', fmtT(P.allowlistStartParis), 'One hour, reserved for the snapshot. Free, capped at 10.'],
   ['Public mint', fmtT(P.publicStartParis), 'Open to anyone. Same price, same cap.'],
-  ['Window closes', fmt(P.mintEndParis), 'A long backstop. The reveal does not wait for it — it triggers on sell-out.'],
+  ['Window closes', fmt(P.mintEndParis), 'A long backstop. The mint ends on sell-out or when the creator closes it; the reveal follows within thirty days.'],
 ];
 
 const traitRow = (g) => g.t

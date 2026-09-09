@@ -58,6 +58,9 @@ const ABI = [
   'function totalMinted() view returns (uint256)',
   'function MAX_SUPPLY() view returns (uint256)',
   'function mintEnd() view returns (uint64)',
+  'function revealAfter() view returns (uint64)',
+  'function soldOutAt() view returns (uint64)',
+  'function MAX_REVEAL_DELAY() view returns (uint64)',
   'function tokenURI(uint256) view returns (string)',
 ];
 const nft = new Contract(dep.nft, ABI, wallet);
@@ -86,6 +89,22 @@ if (!end || (minted < max && chainNow < end)) {
   Le mint est encore en cours : ni sold-out, ni fenetre close. Le contrat
   refuserait l'engagement, et c'est voulu - une graine posee pendant le
   mint rendrait les pieces restantes previsibles.
+
+  Pour fermer le mint maintenant : npm run kids:close -- --${which} --reveal now
+`);
+  process.exit(1);
+}
+
+// Date choisie par le createur, qui ne vaut que 30 jours au plus apres
+// la fin de la distribution.
+const revealAfter = Number(await nft.revealAfter());
+const distributionEnd = Number(await nft.soldOutAt()) || end;
+const forAll = distributionEnd + Number(await nft.MAX_REVEAL_DELAY());
+if (chainNow < revealAfter && chainNow < forAll) {
+  const fmt = (t) => new Date(t * 1000).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'full', timeStyle: 'short' });
+  console.error(`
+  Pas encore : le createur a fixe la revelation au ${fmt(revealAfter)}.
+  Elle sera de toute facon ouverte a tous a partir du ${fmt(forAll)}.
 `);
   process.exit(1);
 }

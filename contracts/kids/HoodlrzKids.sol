@@ -49,10 +49,19 @@ import {HoodlrzKidsRenderer} from "./HoodlrzKidsRenderer.sol";
  *
  *         CE QUI EST FIGE UNE FOIS LE MINT OUVERT
  *         Des que block.timestamp atteint allowlistStart, les phases et la
- *         racine d'allowlist ne bougent plus. Et des que la graine est
- *         posee, plus rien ne se minte : la graine rend les traits de
- *         chaque tokenId calculables, et un mint apres coup serait un
- *         tirage a livre ouvert.
+ *         racine d'allowlist ne bougent plus - a une exception pres, qui
+ *         ne va que dans un sens : le createur peut FERMER le mint
+ *         (closeMint), ce qui reduit de fait la supply aux pieces deja
+ *         mintees. Et des que la graine est posee, plus rien ne se
+ *         minte : la graine rend les traits de chaque tokenId
+ *         calculables, et un mint apres coup serait un tirage a livre
+ *         ouvert.
+ *
+ *         DATE DE REVELATION
+ *         Le createur choisit a partir de quand la revelation peut etre
+ *         engagee (revealAfter), au plus 30 jours apres la fin de la
+ *         distribution. Passe ce delai, n'importe qui peut la lancer :
+ *         choisir le jour, oui ; retenir la collection, non.
  *
  *         PIEGE DE CHAINE
  *         Les phases sont pilotees par block.timestamp, JAMAIS par
@@ -105,12 +114,28 @@ contract HoodlrzKids is ERC721, IERC2981, Ownable2Step {
     uint64 public publicStart;
     uint64 public mintEnd;
 
+    /// @notice Date avant laquelle la revelation ne peut pas etre engagee,
+    ///         choisie par le createur. Zero = des la fin de la distribution.
+    uint64 public revealAfter;
+
+    /// @notice Instant du sold-out, s'il a lieu avant la fin de fenetre.
+    ///         C'est de la que court le delai maximal de revelation.
+    uint64 public soldOutAt;
+
+    /// @notice Delai maximal entre la fin de la distribution et la date de
+    ///         revelation que le createur peut imposer. Au-dela, la
+    ///         revelation redevient possible pour tous : le createur choisit
+    ///         le jour, il ne peut pas tenir la collection en otage.
+    uint64 public constant MAX_REVEAL_DELAY = 30 days;
+
     /// @dev Compte les mints publics + allowlist par adresse, plafond commun.
     mapping(address => uint256) public minted;
 
     /// @notice Verrou du renderer. Une fois pose, l'adresse ne change plus.
     bool public rendererLocked;
 
+    event MintClosedEarly(uint64 at);
+    event RevealAfterSet(uint64 revealAfter);
     event RevealStarted(uint256 revealBlock, address by);
     event SeedRevealed(bytes32 seedBase, uint256 revealBlock);
     event PhasesSet(uint64 allowlistStart, uint64 publicStart, uint64 mintEnd);
@@ -135,6 +160,8 @@ contract HoodlrzKids is ERC721, IERC2981, Ownable2Step {
     error ContractsNotAllowed();
     error PhasesLocked();
     error RevealNotReady();
+    error RevealTooEarly();
+    error RevealDateTooFar();
     error RevealPending();
     error RevealExpired();
     error EngineNotSealed();
@@ -173,6 +200,43 @@ contract HoodlrzKids is ERC721, IERC2981, Ownable2Step {
         publicStart = pubStart;
         mintEnd = end;
         emit PhasesSet(alStart, pubStart, end);
+    }
+
+    /**
+     * @notice Ferme le mint maintenant. Les pieces non mintees n'existeront
+     *         jamais : c'est ainsi que la supply se reduit apres coup.
+     * @dev    Le seul reglage de phase encore permis une fois le mint
+     *         ouvert, et il ne va que dans un sens : fermer. Fermer ne
+     *         donne aucune prise sur la graine, qui vient d'un bloc futur
+     *         et que n'importe qui peut cloturer.
+     */
+    function closeMint() external onlyOwner {
+        if (seedBase != bytes32(0) || !_mintStarted()) revert PhasesLocked();
+        if (block.timestamp >= mintEnd) return; // deja ferme
+        mintEnd = uint64(block.timestamp);
+        emit MintClosedEarly(mintEnd);
+        emit PhasesSet(allowlistStart, publicStart, mintEnd);
+    }
+
+    /**
+     * @notice Choisit a partir de quand la revelation peut etre engagee.
+     * @dev    Bornee a MAX_REVEAL_DELAY apres la fin de la distribution -
+     *         ou apres maintenant si la fin n'est pas encore connue. Le
+     *         createur decide du jour ; il ne peut pas repousser sans fin.
+     *         Zero remet le comportement par defaut : des la fin du mint.
+     */
+    function setRevealAfter(uint64 t) external onlyOwner {
+        if (seedBase != bytes32(0) || revealBlock != 0) revert SeedAlreadySet();
+        require(mintEnd != 0, "Phases non programmees");
+        if (t > _distributionEnd() + MAX_REVEAL_DELAY) revert RevealDateTooFar();
+        revealAfter = t;
+        emit RevealAfterSet(t);
+    }
+
+    /// @dev Fin effective de la distribution : le sold-out s'il a eu lieu,
+    ///      sinon la fermeture de la fenetre.
+    function _distributionEnd() private view returns (uint64) {
+        return soldOutAt != 0 ? soldOutAt : mintEnd;
     }
 
     /// @notice Pose la racine de l'allowlist. Figee des l'ouverture du mint.
@@ -249,6 +313,7 @@ contract HoodlrzKids is ERC721, IERC2981, Ownable2Step {
         uint256 start = totalMinted;
         if (start + qty > MAX_SUPPLY) revert SupplyExhausted();
         totalMinted = start + qty;
+        if (start + qty == MAX_SUPPLY) soldOutAt = uint64(block.timestamp);
         for (uint256 i = 0; i < qty; ++i) {
             _safeMint(to, start + i);
         }
@@ -327,6 +392,12 @@ contract HoodlrzKids is ERC721, IERC2981, Ownable2Step {
     function startReveal() external {
         if (seedBase != bytes32(0)) revert SeedAlreadySet();
         require(_distributionOver(), "Mint en cours");
+        // La date choisie par le createur s'applique, dans la limite de
+        // MAX_REVEAL_DELAY apres la fin de la distribution : au-dela, la
+        // porte s'ouvre quoi qu'il en soit.
+        if (block.timestamp < revealAfter && block.timestamp < _distributionEnd() + MAX_REVEAL_DELAY) {
+            revert RevealTooEarly();
+        }
         // Un engagement en cours ne se remplace pas tant que son hash est
         // encore lisible : sinon on choisirait parmi plusieurs tirages.
         if (revealBlock != 0 && block.number <= revealBlock + 256) revert RevealPending();

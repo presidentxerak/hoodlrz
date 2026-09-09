@@ -39,6 +39,7 @@
     "kids:verify-contracts": "node scripts/kids/verify-contracts.mjs",
     "kids:lock": "node scripts/kids/lock-renderer.mjs",
     "kids:reveal": "node scripts/kids/reveal.mjs",
+    "kids:close": "node scripts/kids/close-mint.mjs",
     "kids:load-test": "node scripts/kids/load-test.mjs",
     "kids:brand": "node scripts/kids/brand-assets.mjs",
     "kids:presskit": "node scripts/kids/press-kit.mjs"

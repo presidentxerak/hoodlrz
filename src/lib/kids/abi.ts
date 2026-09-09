@@ -36,6 +36,7 @@ export const KIDS_ABI = [
   "error ZeroQuantity()",
   "error ContractsNotAllowed()",
   "error RevealNotReady()",
+  "error RevealTooEarly()",
   "error RevealPending()",
   "error RevealExpired()",
   "error SeedAlreadySet()",
@@ -59,6 +60,8 @@ export function humanError(err: unknown): string {
   if (raw.includes("ZeroQuantity")) return "Choose at least one piece.";
   if (raw.includes("ContractsNotAllowed"))
     return "The public mint only accepts regular wallets, not contract wallets.";
+  if (raw.includes("RevealTooEarly"))
+    return "The reveal date set by the creator has not come yet.";
   if (raw.includes("RevealNotReady"))
     return "The committed block is not readable yet. Try again in a couple of minutes.";
   if (raw.includes("RevealPending"))

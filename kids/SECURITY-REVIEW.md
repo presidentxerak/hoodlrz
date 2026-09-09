@@ -223,6 +223,31 @@ peut plus être complétée après coup. Le plafond de 300 tenait déjà.
   octets, STOP en tête (EIP-3541 évité), morceaux sous la limite
   d'init-code EIP-3860.
 
+## Addendum du 9 septembre — deux pouvoirs rendus au créateur
+
+À la demande du créateur, après la revue, deux fonctions ont été
+ajoutées. Elles ont été conçues pour ne rouvrir aucun des findings
+ci-dessus, et sont couvertes par 19 contrôles supplémentaires dans
+`security.test.mjs`.
+
+**`closeMint()`** — le créateur ferme le mint à l'instant. Les pièces non
+mintées n'existent jamais : c'est l'équivalent d'une réduction de supply.
+C'est la seule exception au gel des phases (M-1), et elle ne va que dans
+un sens : fermer. Fermer ne donne aucune prise sur la graine, qui vient
+d'un bloc futur et que n'importe qui peut clôturer (H-1). Ce que ça
+change : le créateur peut interrompre un mint public en cours. C'est un
+pouvoir de fairness, pas de sécurité, et il est dit sur la page de mint.
+
+**`setRevealAfter(t)`** — le créateur choisit à partir de quand la
+révélation peut être engagée. Bornée à 30 jours après la fin de la
+distribution (sold-out ou fermeture, `soldOutAt` est enregistré pour
+cela). Passé ce délai, la révélation redevient possible pour tous : le
+créateur choisit le jour, il ne peut pas retenir la collection (H-2
+préservé). La date ne se change plus une fois un engagement posé.
+
+Le contrat NFT a été redéployé avec ces fonctions ; le moteur et le
+renderer, inchangés, ont été repris.
+
 ## Ce que la revue n'a pas couvert
 
 - Le front-end (`src/`) et les scripts de déploiement, lus seulement pour

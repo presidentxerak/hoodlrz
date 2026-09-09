@@ -419,11 +419,14 @@ function HowItWorks() {
         </Explain>
 
         <Explain title="The reveal does not wait ten years">
-          The mint window runs until {fmtDate(PHASE_ISO.mintEnd)}. The reveal
-          triggers at whichever comes first: the last of the{" "}
-          {KIDS.maxSupply.toLocaleString("en-GB")} pieces being minted, or that
-          date. In practice, when the collection sells out, the seed is set and
-          every piece resolves at once.
+          The mint window runs until {fmtDate(PHASE_ISO.mintEnd)} at the
+          latest. It ends at whichever comes first: the last of the{" "}
+          {KIDS.maxSupply.toLocaleString("en-GB")} pieces being minted, that
+          date, or the creator closing the mint. Closing it is a one-way door
+          — pieces left unminted never exist, and the collection settles at
+          whatever was actually claimed. The reveal date is announced by the
+          creator, at most thirty days after the mint ends; past that, anyone
+          can trigger it.
         </Explain>
 
         <Explain title="Where it lives">
@@ -544,9 +547,10 @@ function Faq() {
     [
       "Why is the mint window ten years long?",
       <>
-        Because closing it early would burn pieces that nobody had claimed
-        yet. The window is a backstop, not a schedule — the reveal is tied to
-        the collection selling out, not to that date.
+        The window is a backstop, not a schedule. The mint ends when the
+        collection sells out, or when the creator closes it — at that point
+        the pieces nobody claimed simply never exist. The reveal follows on
+        a date the creator announces, thirty days after the close at most.
       </>,
     ],
     [

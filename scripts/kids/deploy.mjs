@@ -246,6 +246,16 @@ async function main() {
   const state = existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, 'utf8')) : { chainId };
   if (state.engine) console.log(`Deploiement precedent trouve dans ${stateFile} — reprise\n`);
 
+  // Seul le contrat de collection a change : le moteur (scelle) et le
+  // renderer sont repris, un NFT neuf est deploye devant. L'ancien reste
+  // sur la chaine avec sa reserve, orphelin ; c'est le prix d'un
+  // changement de regle apres deploiement, et il est dit ici.
+  if (has('--new-nft') && state.nft) {
+    console.log(`--new-nft : l'ancien NFT ${state.nft} est abandonne, moteur et renderer repris.\n`);
+    state.previousNft = [...(state.previousNft ?? []), state.nft];
+    delete state.nft;
+  }
+
   // Deux ecritures, deux usages. Le fichier de build sert a la reprise et
   // n'est pas versionne. kids/config.json, lui, est public et suivi : des
   // adresses de contrats y ont leur place, c'est ce qu'on donnera a qui
