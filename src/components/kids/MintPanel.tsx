@@ -144,14 +144,19 @@ export default function MintPanel() {
   };
 
   /* ── Etat de la collection ───────────────────────────────────────── */
+  // Un seul provider pour toute la vie de la page, et sans detection de
+  // reseau : recreer un JsonRpcProvider a chaque lecture coutait deux
+  // requetes de plus (eth_chainId) sur un RPC public deja limite en
+  // debit - multiplie par chaque visiteur, toutes les quinze secondes.
+  const readProvider = useMemo(
+    () => (KIDS_CHAIN.rpcUrl ? new JsonRpcProvider(KIDS_CHAIN.rpcUrl, KIDS_CHAIN.id, { staticNetwork: true }) : null),
+    [],
+  );
+
   const refreshSupply = useCallback(async () => {
     if (!deployed) return;
     try {
-      const provider = KIDS_CHAIN.rpcUrl
-        ? new JsonRpcProvider(KIDS_CHAIN.rpcUrl)
-        : window.ethereum
-          ? new BrowserProvider(window.ethereum)
-          : null;
+      const provider = readProvider ?? (window.ethereum ? new BrowserProvider(window.ethereum) : null);
       if (!provider) return;
       const c = new Contract(KIDS_ADDRESS, KIDS_ABI, provider);
       const total = Number(await c.totalMinted());
@@ -161,7 +166,7 @@ export default function MintPanel() {
       // Un RPC injoignable ne doit pas casser la page : on garde
       // l'affichage precedent et on reessaiera au prochain tick.
     }
-  }, [deployed, account]);
+  }, [deployed, account, readProvider]);
 
   useEffect(() => {
     refreshSupply();
