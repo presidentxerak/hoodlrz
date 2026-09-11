@@ -77,37 +77,53 @@ if ((await nft.seedBase()) !== ZERO32) {
 }
 
 /* ---- Etat de la distribution --------------------------------------- */
-const minted = Number(await nft.totalMinted());
-const max = Number(await nft.MAX_SUPPLY());
-const end = Number(await nft.mintEnd());
-const chainNow = (await provider.getBlock('latest')).timestamp;
-console.log(`  mintes     ${minted} / ${max}`);
-console.log(`  fenetre    ${end ? new Date(end * 1000).toISOString() : 'non programmee'}`);
+// Avec --watch, le script ne s'arrete pas quand ce n'est pas encore le
+// moment : il attend, en relisant la chaine toutes les minutes, et part
+// tout seul des que la revelation devient possible - sold-out, fin de
+// fenetre, fermeture par le createur, date de revelation atteinte. Le
+// contrat reste le seul juge : on ne fait que lui demander.
+const WATCH = has('--watch');
+const fmt = (t) => new Date(t * 1000).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'full', timeStyle: 'short' });
 
-if (!end || (minted < max && chainNow < end)) {
-  console.error(`
-  Le mint est encore en cours : ni sold-out, ni fenetre close. Le contrat
-  refuserait l'engagement, et c'est voulu - une graine posee pendant le
-  mint rendrait les pieces restantes previsibles.
+for (let tour = 0; ; tour++) {
+  const minted = Number(await nft.totalMinted());
+  const max = Number(await nft.MAX_SUPPLY());
+  const end = Number(await nft.mintEnd());
+  const chainNow = (await provider.getBlock('latest')).timestamp;
+  if (tour === 0) {
+    console.log(`  mintes     ${minted} / ${max}`);
+    console.log(`  fenetre    ${end ? 'jusqu au ' + fmt(end) : 'non programmee'}`);
+  }
+
+  let raison = null;
+  if (!end || (minted < max && chainNow < end)) {
+    raison = `mint en cours (${minted}/${max}), ni sold-out ni fenetre close`;
+  } else {
+    // Date choisie par le createur, qui ne vaut que 30 jours au plus
+    // apres la fin de la distribution.
+    const revealAfter = Number(await nft.revealAfter());
+    const distributionEnd = Number(await nft.soldOutAt()) || end;
+    const forAll = distributionEnd + Number(await nft.MAX_REVEAL_DELAY());
+    if (chainNow < revealAfter && chainNow < forAll) {
+      raison = `revelation fixee au ${fmt(revealAfter)} (ouverte a tous le ${fmt(forAll)})`;
+    }
+  }
+  if (!raison) break;
+
+  if (!WATCH) {
+    console.error(`
+  Pas encore : ${raison}.
+  Le contrat refuserait l'engagement, et c'est voulu.
 
   Pour fermer le mint maintenant : npm run kids:close -- --${which} --reveal now
+  Pour attendre et reveler tout seul le moment venu : ajouter --watch
 `);
-  process.exit(1);
+    process.exit(1);
+  }
+  process.stdout.write(`\r  en attente : ${raison}   (${fmt(chainNow)})   `);
+  await wait(60_000);
 }
-
-// Date choisie par le createur, qui ne vaut que 30 jours au plus apres
-// la fin de la distribution.
-const revealAfter = Number(await nft.revealAfter());
-const distributionEnd = Number(await nft.soldOutAt()) || end;
-const forAll = distributionEnd + Number(await nft.MAX_REVEAL_DELAY());
-if (chainNow < revealAfter && chainNow < forAll) {
-  const fmt = (t) => new Date(t * 1000).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'full', timeStyle: 'short' });
-  console.error(`
-  Pas encore : le createur a fixe la revelation au ${fmt(revealAfter)}.
-  Elle sera de toute facon ouverte a tous a partir du ${fmt(forAll)}.
-`);
-  process.exit(1);
-}
+process.stdout.write('\r');
 
 /* ---- 1. Engagement ------------------------------------------------- */
 let rb = Number(await nft.revealBlock());
