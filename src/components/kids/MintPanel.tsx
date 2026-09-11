@@ -40,6 +40,40 @@ declare global {
   interface Window { ethereum?: Eip1193 }
 }
 
+/* ── Decouverte du wallet (EIP-6963) ───────────────────────────────────
+ * `window.ethereum` est un point unique que plusieurs extensions se
+ * disputent : Phantom, Coinbase ou Rabby peuvent s'y installer a la
+ * place de MetaMask, et la demande de connexion part alors vers un wallet
+ * qui ne repond pas. EIP-6963 fait annoncer chaque wallet par un
+ * evenement, avec son identite : on prend MetaMask s'il est la, sinon le
+ * premier annonce, sinon window.ethereum. */
+type Announced = { info: { rdns: string; name: string }; provider: Eip1193 };
+const announced: Announced[] = [];
+if (typeof window !== "undefined") {
+  window.addEventListener("eip6963:announceProvider", (e: Event) => {
+    const d = (e as CustomEvent<Announced>).detail;
+    if (d?.provider && !announced.some((a) => a.info.rdns === d.info.rdns)) announced.push(d);
+  });
+  window.dispatchEvent(new Event("eip6963:requestProvider"));
+}
+function pickWallet(): Eip1193 | undefined {
+  const mm = announced.find((a) => a.info.rdns === "io.metamask");
+  return mm?.provider ?? announced[0]?.provider ?? window.ethereum;
+}
+function walletName(): string {
+  const mm = announced.find((a) => a.info.rdns === "io.metamask");
+  return mm?.info.name ?? announced[0]?.info.name ?? "the wallet";
+}
+
+/** Une promesse qui n'aboutit jamais n'est pas une erreur pour le
+ *  navigateur : elle laisse juste un bouton muet. On borne. */
+function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${what} did not answer within ${ms / 1000}s. Open the extension itself, unlock it, then try again.`)), ms);
+    p.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
+  });
+}
+
 interface Allowlist {
   merkleRoot: string;
   proofs: Record<string, string[]>;
@@ -89,50 +123,60 @@ export default function MintPanel() {
 
   /* ── Wallet ──────────────────────────────────────────────────────── */
   const readAccounts = useCallback(async () => {
-    if (!window.ethereum) return;
-    const accs = (await window.ethereum.request({ method: "eth_accounts" })) as string[];
+    const w = pickWallet();
+    if (!w) return;
+    const accs = (await w.request({ method: "eth_accounts" })) as string[];
     setAccount(accs?.[0] ?? "");
-    const cid = (await window.ethereum.request({ method: "eth_chainId" })) as string;
+    const cid = (await w.request({ method: "eth_chainId" })) as string;
     setChainId(parseInt(cid, 16));
   }, []);
 
   useEffect(() => {
+    // Les annonces EIP-6963 arrivent juste apres le chargement : on
+    // redemande une fois monte, puis on lit les comptes.
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+    const t = setTimeout(readAccounts, 150);
     readAccounts();
-    const eth = window.ethereum;
-    if (!eth?.on) return;
+    const eth = pickWallet();
+    if (!eth?.on) return () => clearTimeout(t);
     const onAcc = () => readAccounts();
     const onChain = () => readAccounts();
     eth.on("accountsChanged", onAcc);
     eth.on("chainChanged", onChain);
     return () => {
+      clearTimeout(t);
       eth.removeListener?.("accountsChanged", onAcc);
       eth.removeListener?.("chainChanged", onChain);
     };
   }, [readAccounts]);
 
   const connect = async () => {
-    if (!window.ethereum) {
+    const w = pickWallet();
+    if (!w) {
       setMsg({ kind: "err", text: "No wallet detected. Install MetaMask to mint." });
       return;
     }
+    setMsg({ kind: "info", text: `Asking ${walletName()} to connect…` });
     try {
-      await window.ethereum.request({ method: "eth_requestAccounts" });
+      await withTimeout(w.request({ method: "eth_requestAccounts" }), 20000, walletName());
       await readAccounts();
+      setMsg(null);
     } catch (e) {
       setMsg({ kind: "err", text: humanError(e) });
     }
   };
 
   const switchChain = async () => {
-    if (!window.ethereum) return;
+    const w = pickWallet();
+    if (!w) return;
     const hex = "0x" + KIDS_CHAIN.id.toString(16);
     try {
-      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: hex }] });
+      await w.request({ method: "wallet_switchEthereumChain", params: [{ chainId: hex }] });
     } catch (e) {
       // 4902 = chaine inconnue du wallet : on propose de l'ajouter.
       if ((e as { code?: number })?.code === 4902) {
         try {
-          await window.ethereum.request({ method: "wallet_addEthereumChain", params: [chainParams()] });
+          await w.request({ method: "wallet_addEthereumChain", params: [chainParams()] });
         } catch (e2) {
           setMsg({ kind: "err", text: humanError(e2) });
         }
@@ -156,7 +200,8 @@ export default function MintPanel() {
   const refreshSupply = useCallback(async () => {
     if (!deployed) return;
     try {
-      const provider = readProvider ?? (window.ethereum ? new BrowserProvider(window.ethereum) : null);
+      const w = pickWallet();
+      const provider = readProvider ?? (w ? new BrowserProvider(w) : null);
       if (!provider) return;
       const c = new Contract(KIDS_ADDRESS, KIDS_ABI, provider);
       const total = Number(await c.totalMinted());
@@ -176,11 +221,12 @@ export default function MintPanel() {
 
   /* ── Mint ────────────────────────────────────────────────────────── */
   const mint = async () => {
-    if (!window.ethereum || !deployed) return;
+    const w = pickWallet();
+    if (!w || !deployed) return;
     setBusy(true);
     setMsg({ kind: "info", text: "Confirm the transaction in your wallet…" });
     try {
-      const signer = await new BrowserProvider(window.ethereum).getSigner();
+      const signer = await new BrowserProvider(w).getSigner();
       const c = new Contract(KIDS_ADDRESS, KIDS_ABI, signer);
       const tx =
         phase === "allowlist"
