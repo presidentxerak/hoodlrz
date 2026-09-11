@@ -46,10 +46,10 @@
     "_note": "Renseigne automatiquement par scripts/kids/snapshot.mjs.",
     "contract": "0xdde5f965f9d80da49c5cb2951d046156f26ebfa2",
     "chain": "eth-mainnet",
-    "takenAt": null,
+    "takenAt": "2026-09-11T07:28:25.260Z",
     "blockNumber": null,
-    "holderCount": null,
-    "merkleRoot": null
+    "holderCount": 122,
+    "merkleRoot": "0xa7628c8b36beebdf0dc5aacd54ae5e4db5fc68cce101797a424530052131df63"
   },
   "deployments": {
     "4663": {
