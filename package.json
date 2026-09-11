@@ -41,6 +41,7 @@
     "kids:reveal": "node scripts/kids/reveal.mjs",
     "kids:close": "node scripts/kids/close-mint.mjs",
     "kids:arm": "node scripts/kids/arm.mjs",
+    "kids:schedule": "node scripts/kids/schedule.mjs",
     "kids:load-test": "node scripts/kids/load-test.mjs",
     "kids:brand": "node scripts/kids/brand-assets.mjs",
     "kids:presskit": "node scripts/kids/press-kit.mjs"
