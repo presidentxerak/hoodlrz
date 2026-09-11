@@ -403,7 +403,7 @@ const html = `<!doctype html><meta charset="utf-8">
     <div>
       <div class="kicker" style="margin-bottom:2mm">Contact</div>
       <div class="brand" style="font-size:17pt">XERAK</div>
-      <div class="muted" style="font-size:9.5pt">hoodlrz.com/kids · x.com/hoodlrz_art</div>
+      <div class="muted" style="font-size:9.5pt">hoodlrz.com/kids · x.com/hoodlrz</div>
     </div>
     <span class="cta">Hoodlrz Gen Kids</span>
   </div>

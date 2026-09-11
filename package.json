@@ -43,6 +43,7 @@
     "kids:arm": "node scripts/kids/arm.mjs",
     "kids:schedule": "node scripts/kids/schedule.mjs",
     "kids:mint": "node scripts/kids/mint.mjs",
+    "kids:index": "node scripts/kids/index-collection.mjs",
     "kids:load-test": "node scripts/kids/load-test.mjs",
     "kids:brand": "node scripts/kids/brand-assets.mjs",
     "kids:presskit": "node scripts/kids/press-kit.mjs"

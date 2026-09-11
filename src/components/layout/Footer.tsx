@@ -27,7 +27,7 @@ export default function Footer() {
             Contact
           </a>
           <a
-            href="https://x.com/hoodlrz_art"
+            href="https://x.com/hoodlrz"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Hoodlrz on X"

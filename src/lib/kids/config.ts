@@ -134,6 +134,13 @@ export const KIDS_ADDRESS = process.env.NEXT_PUBLIC_KIDS_ADDRESS ?? DEPLOYED_ADD
 
 export const isDeployed = () => /^0x[a-fA-F0-9]{40}$/.test(KIDS_ADDRESS);
 
+/** Page de la collection sur OpenSea. */
+export const KIDS_OPENSEA_URL = "https://opensea.io/collection/hoodlrzgenkids";
+
+/** Page d'une piece sur l'explorateur de la chaine. */
+export const kidsTokenUrl = (id: number) =>
+  `${KIDS_CHAIN.explorerUrl}/token/${KIDS_ADDRESS}/instance/${id}`;
+
 /** Parametres au format attendu par wallet_addEthereumChain. */
 export function chainParams() {
   return {

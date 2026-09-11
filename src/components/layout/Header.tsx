@@ -101,7 +101,7 @@ export default function Header() {
             </nav>
 
             <a
-              href="https://x.com/hoodlrz_art"
+              href="https://x.com/hoodlrz"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Hoodlrz on X"

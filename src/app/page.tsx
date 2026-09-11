@@ -3,11 +3,10 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
-import Countdown from "@/components/ui/Countdown";
 import FaqAccordion from "@/components/ui/FaqAccordion";
 import EnginePreview from "@/components/kids/EnginePreview";
 import { HOODLRZ_FAQ } from "@/lib/faq";
-import { KIDS, KIDS_CHAIN, PHASES, PHASE_ISO, phaseAt, fmtDate } from "@/lib/kids/config";
+import { KIDS, KIDS_CHAIN, KIDS_OPENSEA_URL, PHASE_ISO, fmtDate } from "@/lib/kids/config";
 import { HOODLRZ_OPENSEA_URL } from "@/lib/web3/config";
 
 const STREET_SUPPLY = 333;
@@ -65,40 +64,6 @@ export default function HomePage() {
  *  Compte a rebours du drop
  * ------------------------------------------------------------------ */
 
-/**
- * Vise la prochaine echeance reelle, pas une date fixe : afficher encore
- * le snapshot une fois l'allowlist ouverte n'aurait plus de sens.
- *
- * `now` reste a null jusqu'au montage. La page est prerendue, et lire
- * l'horloge au premier rendu produirait un HTML serveur different du
- * client - donc une erreur d'hydratation.
- */
-function DropCountdown() {
-  const [now, setNow] = useState<number | null>(null);
-  useEffect(() => {
-    setNow(Math.floor(Date.now() / 1000));
-    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  if (now === null) return <div className="h-[90px]" aria-hidden />;
-
-  const phase = phaseAt(now);
-  const [target, label] =
-    now < PHASES.snapshot ? [PHASE_ISO.snapshot, "Holder Snapshot"]
-    : phase === "avant" ? [PHASE_ISO.allowlistStart, "Allowlist Opens"]
-    : phase === "allowlist" ? [PHASE_ISO.publicStart, "Public Mint"]
-    : [null, null];
-
-  if (!target || !label) {
-    return (
-      <p className="font-hoodlrz text-3xl font-bold tracking-wider text-accent-red">
-        {phase === "public" ? "MINT IS LIVE" : "MINT CLOSED"}
-      </p>
-    );
-  }
-  return <Countdown targetDate={target} label={label} />;
-}
 
 /* ------------------------------------------------------------------ *
  *  OG Hoodlrz
@@ -314,7 +279,7 @@ function Hero() {
 
         <div className="mt-6 w-full border border-white/15 bg-black/50 px-6 py-8 backdrop-blur-sm sm:px-10">
           <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">
-            New drop
+            New collection
           </p>
           <p className="font-hoodlrz mt-2 text-[34px] font-bold leading-none tracking-wider text-white sm:text-[52px]">
             Hoodlrz Gen Kids
@@ -322,28 +287,25 @@ function Hero() {
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
             <span className="border border-[#c6f24e]/40 bg-[#c6f24e]/10 px-3 py-1 text-[10px] uppercase tracking-widest text-[#c6f24e]">
-              Mint on {KIDS_CHAIN.name}
+              Live on {KIDS_CHAIN.name}
             </span>
             <span className="text-[11px] uppercase tracking-widest text-white/50">
-              {KIDS.maxSupply.toLocaleString("en-GB")} pieces · free · fully on-chain
+              {KIDS.maxSupply.toLocaleString("en-GB")} pieces · fully on-chain
             </span>
-          </div>
-
-          <div className="mt-8">
-            <DropCountdown />
           </div>
 
           <p className="mt-6 text-sm leading-relaxed text-white/70">
-            {fmtDate(PHASE_ISO.publicStart)} — {STREET_SUPPLY} OG Hoodlrz
-            holders mint first.
+            Minted {fmtDate(PHASE_ISO.publicStart)}. Every piece is drawn live
+            by the engine stored in the contract — browse them here, trade
+            them on OpenSea.
           </p>
 
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Button variant="primary" size="lg" href="/kids">
-              Gen Kids drop
+              Browse Gen Kids
             </Button>
-            <Button variant="secondary" size="lg" href={HOODLRZ_OPENSEA_URL}>
-              OG Hoodlrz on OpenSea
+            <Button variant="secondary" size="lg" href={KIDS_OPENSEA_URL}>
+              Gen Kids on OpenSea
             </Button>
           </div>
         </div>

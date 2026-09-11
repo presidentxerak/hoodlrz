@@ -11,11 +11,11 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Hoodlrz Gen Kids — 3,333 fully on-chain generative pieces",
   description:
-    "A free-mint generative collection on Robinhood Chain, whose rendering engine lives inside the blockchain. Every Kid redraws itself from its own seed. Hoodlrz holders mint first.",
+    "A generative collection on Robinhood Chain whose rendering engine lives inside the blockchain. Every Kid redraws itself from its own seed. Browse the collection, open any piece live.",
   openGraph: {
     title: "Hoodlrz Gen Kids",
     description:
-      "3,333 generative pieces, fully on-chain on Robinhood Chain. Free mint. OG Hoodlrz holders first.",
+      "3,333 generative pieces, fully on-chain on Robinhood Chain. Browse the collection, trade on OpenSea.",
   },
 };
 
