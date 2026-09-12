@@ -50,6 +50,7 @@
     "kids:render-images": "node scripts/kids/render-images.mjs",
     "kids:upload-images": "node scripts/kids/upload-images.mjs",
     "kids:render-page": "node scripts/kids/make-render-page.mjs",
+    "kids:opensea-check": "node scripts/kids/opensea-check.mjs",
     "kids:opensea-refresh": "node scripts/kids/opensea-refresh.mjs",
     "kids:load-test": "node scripts/kids/load-test.mjs",
     "kids:holdings": "node scripts/kids/holdings.mjs",
