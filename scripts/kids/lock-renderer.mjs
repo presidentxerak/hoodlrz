@@ -106,7 +106,17 @@ if (minted > 0) {
   ok('tokenURI repond en data URI', uri.startsWith('data:application/json;base64,'));
   const meta = JSON.parse(Buffer.from(uri.split(',')[1], 'base64').toString('utf8'));
   ok('le token a un nom', typeof meta.name === 'string' && meta.name.length > 0, meta.name);
-  ok('une image est presente', typeof meta.image === 'string' && meta.image.length > 200);
+  // v1 : l'image est une affiche encodee dans les metadonnees. v2 : une
+  // URL vers la capture servie par le site - alors on va la chercher,
+  // parce que verrouiller sur une image qui ne repond pas serait definitif.
+  if (typeof meta.image === 'string' && /^https?:\/\//.test(meta.image)) {
+    const r = await fetch(meta.image, { signal: AbortSignal.timeout(15000) }).catch(() => null);
+    const type = r?.headers.get('content-type') ?? '';
+    ok('l image repond depuis le site', !!r?.ok && /^image\//.test(type),
+       r ? `${r.status} ${type}   ${meta.image}` : `injoignable   ${meta.image}`);
+  } else {
+    ok('une image est presente', typeof meta.image === 'string' && meta.image.length > 200);
+  }
   // Un token revele doit porter ses attributs ; un placeholder n'en a pas,
   // et c'est legitime avant revelation.
   const revele = Array.isArray(meta.attributes) && meta.attributes.length === 9;
