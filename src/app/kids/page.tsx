@@ -215,6 +215,22 @@ function HowItWorks() {
           you already place in it for every transaction here.
         </Explain>
 
+        {KIDS_ORIGIN_ADDRESS && (
+          <Explain title="Why there are two contracts">
+            The collection was minted, sold out and revealed on a first
+            contract. Marketplaces show a static image on their cards and
+            never render a program there, and the on-chain poster that first
+            contract drew for its image was too simple: thousands of cards
+            looked alike. The contract was locked, by design, so the fix was
+            a second contract: same seed, same hashes, same traits, same
+            on-chain engine for the animation, and a card that shows the
+            actual piece. Every holder received the same numbers in the new
+            contract by airdrop, read from the first one at the moment of
+            sending, with nothing to do and nothing to pay. The first pieces
+            stay in their wallets; the new collection is the one traded.
+          </Explain>
+        )}
+
         <Explain title="Where it lives">
           {KIDS_CHAIN.name}. That chain is young: its sequencer is centralised
           and its system contracts remain upgradable by its operator. So the
