@@ -89,15 +89,30 @@ while (done < MAX) {
 console.log(`\n  distribution complete en ${((Date.now() - t0) / 1000).toFixed(0)} s\n`);
 
 /* ---- Preuve : chaque piece chez le bon proprietaire --------------------- */
+// Le fournisseur RPC limite le debit : on lit peu a la fois et on
+// reessaie quand il refuse, plutot que de s'arreter au premier 429.
+const lire = async (fn, tries = 8) => {
+  for (let i = 1; ; i++) {
+    try { return await fn(); }
+    catch (e) {
+      const msg = String(e.message ?? e) + JSON.stringify(e.info ?? {});
+      const limite = /429|rate|capacity|exceeded|too many/i.test(msg);
+      if (!limite || i >= tries) throw e;
+      await wait(1500 * i);
+    }
+  }
+};
 console.log('Verification piece par piece…');
 const mismatches = [];
-const CONC = 8;
+const CONC = 4;
 for (let start = 0; start < MAX; start += CONC) {
   const ids = Array.from({ length: Math.min(CONC, MAX - start) }, (_, i) => start + i);
   const rows = await Promise.all(ids.map(async (id) => {
-    const [a, b] = await Promise.all([v1.ownerOf(id), v2.ownerOf(id).catch(() => null)]);
+    const a = await lire(() => v1.ownerOf(id));
+    const b = await lire(() => v2.ownerOf(id)).catch(() => null);
     return [id, a, b];
   }));
+  await wait(150);
   for (const [id, a, b] of rows) if (!b || a.toLowerCase() !== b.toLowerCase()) mismatches.push({ id, origine: a, v2: b });
   if ((start + CONC) % 400 < CONC) process.stdout.write(`\r  ${Math.min(start + CONC, MAX)} / ${MAX} comparees   `);
 }
