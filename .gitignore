@@ -42,3 +42,5 @@ next-env.d.ts
 # les octets exacts qui partent sur la chaine.
 kids/build/verify/
 kids/build/deployment-*.json
+kids/build/images/
+kids/build/deployment-v2-*.json

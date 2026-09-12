@@ -93,15 +93,26 @@ const CONTRATS = [
   { name: 'HoodlrzKidsEngine', address: dep.engine, ctor: '0x' },
   {
     name: 'HoodlrzKidsRenderer',
-    address: dep.renderer,
+    address: dep.rendererV1 ?? dep.renderer,
     ctor: coder.encode(['address'], [dep.engine]),
   },
   {
     name: 'HoodlrzKids',
-    address: dep.nft,
-    ctor: coder.encode(['address', 'address'], [dep.renderer, royaltyTo]),
+    address: dep.origin ?? dep.nft,
+    ctor: coder.encode(['address', 'address'], [dep.rendererV1 ?? dep.renderer, royaltyTo]),
   },
 ];
+// Collection v2, si elle a ete deployee devant l'origine.
+if (dep.origin) {
+  CONTRATS.push(
+    { name: 'HoodlrzKidsRendererV2', address: dep.renderer, ctor: coder.encode(['address'], [dep.engine]) },
+    {
+      name: 'HoodlrzKidsV2',
+      address: dep.nft,
+      ctor: coder.encode(['address', 'address', 'address', 'string'], [dep.origin, dep.renderer, royaltyTo, dep.imageBase]),
+    },
+  );
+}
 
 const only = val('--only');
 const cibles = only ? CONTRATS.filter((c) => c.name === only) : CONTRATS;

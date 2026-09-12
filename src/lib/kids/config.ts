@@ -132,6 +132,13 @@ const DEPLOYED_ADDRESS =
 
 export const KIDS_ADDRESS = process.env.NEXT_PUBLIC_KIDS_ADDRESS ?? DEPLOYED_ADDRESS;
 
+/** Collection d'origine, quand la collection courante est une v2 qui
+ *  l'a redistribuee. Vide sinon. */
+export const KIDS_ORIGIN_ADDRESS =
+  deployed && !Array.isArray(deployed) && typeof (deployed as { origin?: unknown }).origin === "string"
+    ? ((deployed as { origin: string }).origin)
+    : "";
+
 export const isDeployed = () => /^0x[a-fA-F0-9]{40}$/.test(KIDS_ADDRESS);
 
 /** Page de la collection sur OpenSea. */

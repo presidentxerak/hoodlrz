@@ -248,6 +248,33 @@ préservé). La date ne se change plus une fois un engagement posé.
 Le contrat NFT a été redéployé avec ces fonctions ; le moteur et le
 renderer, inchangés, ont été repris.
 
+## Addendum du 12 septembre — collection v2
+
+Après le sold out et la révélation, les cartes OpenSea montraient
+l'affiche SVG on-chain, simplifiée, identique pour des milliers de
+pièces. Le renderer étant verrouillé, la seule correction est une
+nouvelle collection. `HoodlrzKidsV2` et `HoodlrzKidsRendererV2` :
+
+- copient la graine et le nombre de pièces de l'origine à la
+  construction (immuables) : mêmes hashs, mêmes traits, même
+  `animation_url` produite par le même moteur scellé, vérifié au bit
+  près par `v2.test.mjs` ;
+- distribuent chaque pièce à son propriétaire lu **dans l'origine au
+  moment de l'envoi** (`airdrop`, relançable, borné à la supply, chaque
+  numéro une fois) ; aucune autre fonction de mint ;
+- annoncent en `image` une capture servie par le site
+  (`<imageBase><id>.png`). `imageBase` reste modifiable par le créateur
+  pour survivre à un changement de domaine, et chaque changement émet
+  ERC-4906. C'est une vignette, pas l'œuvre : l'œuvre reste on-chain, et
+  l'affiche SVG on-chain reste disponible (`posterFor`) pour la
+  régénérer si le site disparaît ;
+- gardent `Ownable2Step`, le verrou du renderer conditionné au moteur
+  scellé, et une renonciation possible seulement une fois la
+  distribution complète et le renderer verrouillé.
+
+Pouvoir résiduel, dit explicitement : le créateur peut changer les
+vignettes (pas l'œuvre) tant qu'il détient le contrat.
+
 ## Ce que la revue n'a pas couvert
 
 - Le front-end (`src/`) et les scripts de déploiement, lus seulement pour

@@ -75,5 +75,9 @@
       "deployedAt": "2026-09-09T07:09:12.571Z"
     },
     "_note": "Adresses des contrats deployes, par chain ID. Ecrit par kids:deploy."
+  },
+  "v2": {
+    "_note": "Collection v2 : memes pieces, vignette = capture servie par le site. imageBase = <siteBase>/kids/img/<id>.png",
+    "siteBase": "https://www.hoodlrz.com"
   }
 }

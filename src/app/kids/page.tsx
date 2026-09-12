@@ -20,6 +20,7 @@ import {
   KIDS,
   KIDS_CHAIN,
   KIDS_ADDRESS,
+  KIDS_ORIGIN_ADDRESS,
   KIDS_OPENSEA_URL,
   isDeployed,
 } from "@/lib/kids/config";
@@ -290,6 +291,23 @@ function Details() {
               className="break-all text-right font-mono text-xs font-bold text-foreground underline decoration-white/30 underline-offset-4 hover:decoration-white"
             >
               {KIDS_ADDRESS}
+            </a>
+          </div>
+        )}
+        {KIDS_ORIGIN_ADDRESS && (
+          // La collection a ete redistribuee depuis un premier contrat :
+          // il reste lisible, et un collectionneur doit pouvoir le retrouver.
+          <div className="flex items-center justify-between gap-6 border-t border-[var(--border)] pt-3">
+            <span className="text-xs font-bold uppercase tracking-widest text-muted">
+              Original contract
+            </span>
+            <a
+              href={`${KIDS_CHAIN.explorerUrl}/address/${KIDS_ORIGIN_ADDRESS}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="break-all text-right font-mono text-xs text-muted underline decoration-white/20 underline-offset-4 hover:text-foreground"
+            >
+              {KIDS_ORIGIN_ADDRESS}
             </a>
           </div>
         )}
