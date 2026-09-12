@@ -53,6 +53,7 @@
     "kids:opensea-check": "node scripts/kids/opensea-check.mjs",
     "kids:opensea-refresh": "node scripts/kids/opensea-refresh.mjs",
     "kids:load-test": "node scripts/kids/load-test.mjs",
+    "kids:audit": "node scripts/kids/audit-mints.mjs",
     "kids:holdings": "node scripts/kids/holdings.mjs",
     "kids:banner-og": "node scripts/kids/banner-og.mjs",
     "kids:banner": "node scripts/kids/banner.mjs",
