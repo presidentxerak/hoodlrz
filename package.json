@@ -52,6 +52,7 @@
     "kids:render-page": "node scripts/kids/make-render-page.mjs",
     "kids:opensea-refresh": "node scripts/kids/opensea-refresh.mjs",
     "kids:load-test": "node scripts/kids/load-test.mjs",
+    "kids:banner": "node scripts/kids/banner.mjs",
     "kids:brand": "node scripts/kids/brand-assets.mjs",
     "kids:presskit": "node scripts/kids/press-kit.mjs"
   },
