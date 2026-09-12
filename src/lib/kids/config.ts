@@ -141,8 +141,22 @@ export const KIDS_ORIGIN_ADDRESS =
 
 export const isDeployed = () => /^0x[a-fA-F0-9]{40}$/.test(KIDS_ADDRESS);
 
-/** Page de la collection sur OpenSea. */
-export const KIDS_OPENSEA_URL = "https://opensea.io/collection/hoodlrzgenkids";
+/**
+ * Page de la collection sur OpenSea.
+ *
+ * Le slug n'est pas ecrit en dur : « hoodlrzgenkids » est celui de la
+ * collection d'origine, et l'y laisser apres la redistribution enverrait
+ * tous les boutons du site vers l'ancienne. Il vit donc dans
+ * kids/config.json, a cote des adresses.
+ *
+ * Tant qu'il n'est pas renseigne, on renvoie vers une piece de la
+ * collection courante : une page d'item existe toujours, porte le lien
+ * vers sa propre collection, et ne peut pas designer la mauvaise.
+ */
+const OPENSEA_SLUG = (kidsConfig as { v2?: { openseaSlug?: string } }).v2?.openseaSlug ?? "";
+export const KIDS_OPENSEA_URL = OPENSEA_SLUG
+  ? `https://opensea.io/collection/${OPENSEA_SLUG}`
+  : `https://opensea.io/item/robinhood/${KIDS_ADDRESS}/0`;
 
 /** Page d'une piece sur OpenSea (identifiant de chaine tel qu'OpenSea le
  *  met dans ses URL d'items). */

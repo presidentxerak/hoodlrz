@@ -86,6 +86,8 @@
   },
   "v2": {
     "_note": "Collection v2 : memes pieces, vignette = capture servie par le site. imageBase = <siteBase>/kids/img/<id>.png",
-    "siteBase": "https://www.hoodlrz.com"
+    "siteBase": "https://www.hoodlrz.com",
+    "openseaSlug": "",
+    "_slug": "Slug de la collection v2 sur OpenSea, celui de l'URL opensea.io/collection/<slug>. Tant qu'il est vide, le site renvoie vers une piece de la v2 plutot que vers une collection qui pourrait etre l'ancienne."
   }
 }
