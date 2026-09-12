@@ -18,7 +18,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { solidityPackedKeccak256 } from "ethers";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
-import { KIDS, KIDS_OPENSEA_URL, kidsTokenUrl } from "@/lib/kids/config";
+import { KIDS, KIDS_OPENSEA_URL, kidsOpenSeaItemUrl, kidsTokenUrl } from "@/lib/kids/config";
 
 interface Index {
   contract: string;
@@ -273,7 +273,7 @@ export default function Collection() {
                 Live, drawn by the engine stored in the contract. Tap the artwork to change the punchline.
               </p>
               <div className="mt-auto flex flex-col gap-2">
-                <Button variant="primary" size="sm" href={KIDS_OPENSEA_URL}>View on OpenSea</Button>
+                <Button variant="primary" size="sm" href={kidsOpenSeaItemUrl(open)}>View on OpenSea</Button>
                 <Button variant="secondary" size="sm" href={kidsTokenUrl(open)}>On the explorer</Button>
                 <button
                   type="button"

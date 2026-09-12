@@ -44,6 +44,7 @@
     "kids:schedule": "node scripts/kids/schedule.mjs",
     "kids:mint": "node scripts/kids/mint.mjs",
     "kids:index": "node scripts/kids/index-collection.mjs",
+    "kids:opensea-refresh": "node scripts/kids/opensea-refresh.mjs",
     "kids:load-test": "node scripts/kids/load-test.mjs",
     "kids:brand": "node scripts/kids/brand-assets.mjs",
     "kids:presskit": "node scripts/kids/press-kit.mjs"

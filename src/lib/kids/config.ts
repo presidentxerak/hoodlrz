@@ -137,6 +137,11 @@ export const isDeployed = () => /^0x[a-fA-F0-9]{40}$/.test(KIDS_ADDRESS);
 /** Page de la collection sur OpenSea. */
 export const KIDS_OPENSEA_URL = "https://opensea.io/collection/hoodlrzgenkids";
 
+/** Page d'une piece sur OpenSea (identifiant de chaine tel qu'OpenSea le
+ *  met dans ses URL d'items). */
+export const kidsOpenSeaItemUrl = (id: number) =>
+  `https://opensea.io/item/robinhood/${KIDS_ADDRESS}/${id}`;
+
 /** Page d'une piece sur l'explorateur de la chaine. */
 export const kidsTokenUrl = (id: number) =>
   `${KIDS_CHAIN.explorerUrl}/token/${KIDS_ADDRESS}/instance/${id}`;
