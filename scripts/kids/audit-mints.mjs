@@ -18,6 +18,8 @@
  *   npm run kids:audit -- --mainnet
  *   npm run kids:audit -- --mainnet --wallet 0x…      detaille un wallet
  *   npm run kids:audit -- --mainnet --v2              audite l'airdrop v2
+ *   npm run kids:audit -- --mainnet --depuis 25900000 depart force
+ *   npm run kids:audit -- --mainnet --proprietaires   qui detient quoi, sans logs
  */
 
 import './env.mjs';
@@ -63,6 +65,8 @@ async function lire(fn, tries = 6) {
 const nft = new Contract(CONTRACT, [
   'function name() view returns (string)',
   'function totalMinted() view returns (uint256)',
+  'function totalSupply() view returns (uint256)',
+  'function ownerOf(uint256) view returns (address)',
   'function allowlistStart() view returns (uint64)',
   'function publicStart() view returns (uint64)',
   'function mintEnd() view returns (uint64)',
@@ -70,10 +74,23 @@ const nft = new Contract(CONTRACT, [
 
 console.log(`\nAudit du mint — ${CH.id === 4663 ? 'Robinhood Chain' : 'Robinhood Chain Testnet'}`);
 console.log(`  contrat  ${CONTRACT}`);
+// Quel endpoint repond : une part des surprises vient de la, et la cle
+// ne doit pas s'afficher en clair dans un terminal partage.
+console.log(`  rpc      ${rpc.replace(/\/v2\/[^/]+/, '/v2/***').replace(/(key=)[^&]+/, '$1***')}`);
 
 let nom = '?';
-try { nom = await lire(() => nft.name()); } catch { console.error('\n  Contrat illisible.\n'); process.exit(1); }
+try { nom = await lire(() => nft.name()); }
+catch (e) {
+  console.error(`\n  Contrat illisible : ${String(e.shortMessage ?? e.message ?? e).slice(0, 200)}`);
+  console.error(`  Verifier que le RPC repond et qu'il s'agit du bon reseau.\n`);
+  process.exit(1);
+}
 console.log(`  nom      «${nom}»`);
+
+let minted = 0;
+try { minted = Number(await lire(() => nft.totalMinted())); }
+catch { try { minted = Number(await lire(() => nft.totalSupply())); } catch { /* inconnu */ } }
+if (minted) console.log(`  pieces   ${minted} d apres le contrat lui-meme`);
 
 /* ---- Les bornes de phase, lues dans le contrat ------------------------- */
 // Le contrat v2 n'a pas de phases : c'est une redistribution, pas un mint.
@@ -90,19 +107,45 @@ if (AL) {
   console.log(`  fin        ${fmt(END)}`);
 }
 
-/* ---- Trouver le bloc de deploiement ------------------------------------ */
-// Balayer depuis le bloc zero couterait des milliers de requetes. Le
-// contrat n'a de code qu'a partir de son deploiement : une recherche
-// dichotomique le trouve en une vingtaine de lectures.
+/* ---- Trouver par ou commencer la lecture -------------------------------- */
+// Balayer depuis le bloc zero couterait des milliers de requetes. Il faut
+// donc un point de depart.
+//
+// La tentation est de chercher le bloc de deploiement en interrogeant le
+// code du contrat a differentes hauteurs. C'est un piege : lire le code a
+// un ancien bloc est une lecture d'ETAT PASSE, que seuls les noeuds
+// d'archive servent. Un noeud ordinaire repond « vide » partout, la
+// recherche conclut « deploye a l'instant », et l'audit annonce zero mint
+// alors que tout va bien.
+//
+// On cherche donc par l'HORODATAGE, qui vit dans l'en-tete des blocs et
+// que tous les noeuds servent. La date de deploiement est dans
+// kids/config.json ; on part d'un jour avant, par securite.
 const latest = await lire(() => provider.getBlockNumber());
-let lo = 0, hi = latest;
-while (lo < hi) {
-  const mid = Math.floor((lo + hi) / 2);
-  const code = await lire(() => provider.getCode(CONTRACT, mid));
-  if (code && code !== '0x') hi = mid; else lo = mid + 1;
+
+async function blocALaDate(cible) {
+  let lo = 1, hi = latest, res = 1;
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const b = await lire(() => provider.getBlock(mid));
+    if (!b) { hi = mid - 1; continue; }
+    if (b.timestamp < cible) { res = mid; lo = mid + 1; } else hi = mid - 1;
+  }
+  return res;
 }
-const deployBlock = lo;
-console.log(`  deploye au bloc ${deployBlock.toLocaleString('fr')}, chaine a ${latest.toLocaleString('fr')}\n`);
+
+let deployBlock;
+const force = val('--depuis');
+if (force) {
+  deployBlock = Number(force);
+  console.log(`  depart force au bloc ${deployBlock.toLocaleString('fr')}`);
+} else {
+  const iso = has('--v2') ? dep.v2DeployedAt : dep.deployedAt;
+  const cible = Math.floor(new Date(iso ?? cfg.phases.snapshotParis).getTime() / 1000) - 86_400;
+  deployBlock = await blocALaDate(cible);
+  console.log(`  lecture depuis le bloc ${deployBlock.toLocaleString('fr')} (${fmt(cible)})`);
+}
+console.log(`  chaine a ${latest.toLocaleString('fr')}\n`);
 
 /* ---- Lire tous les mints ----------------------------------------------- */
 // Un mint est un Transfer depuis l'adresse nulle. On filtre la-dessus
@@ -110,35 +153,92 @@ console.log(`  deploye au bloc ${deployBlock.toLocaleString('fr')}, chaine a ${l
 const TRANSFER = topicId('Transfer(address,address,uint256)');
 const ZERO_TOPIC = '0x' + '0'.repeat(64);
 const mints = [];
-let span = 50_000;
-console.log('Lecture des evenements de mint…');
-for (let from = deployBlock; from <= latest; ) {
-  const to = Math.min(from + span - 1, latest);
-  let logs;
+let span = 50_000, panne = null;
+if (!has('--proprietaires')) {
+  console.log('Lecture des evenements de mint…');
   try {
-    logs = await lire(() => provider.getLogs({
-      address: CONTRACT, fromBlock: from, toBlock: to, topics: [TRANSFER, ZERO_TOPIC],
-    }), 3);
+    for (let from = deployBlock; from <= latest; ) {
+      const to = Math.min(from + span - 1, latest);
+      let logs;
+      try {
+        logs = await lire(() => provider.getLogs({
+          address: CONTRACT, fromBlock: from, toBlock: to, topics: [TRANSFER, ZERO_TOPIC],
+        }), 3);
+      } catch (e) {
+        // Certains fournisseurs refusent les grandes plages : on reduit.
+        if (span > 500) { span = Math.floor(span / 5); continue; }
+        throw e;
+      }
+      for (const l of logs) {
+        mints.push({
+          block: l.blockNumber,
+          tx: l.transactionHash,
+          to: getAddress('0x' + l.topics[2].slice(26)),
+          id: Number(BigInt(l.topics[3])),
+        });
+      }
+      from = to + 1;
+      process.stdout.write(`\r  ${mints.length} pieces mintees, jusqu au bloc ${from.toLocaleString('fr')}…   `);
+    }
+    console.log(`\r  ${mints.length} pieces mintees au total                      \n`);
   } catch (e) {
-    // Certains fournisseurs refusent les grandes plages : on reduit.
-    if (span > 2000) { span = Math.floor(span / 5); continue; }
-    throw e;
+    panne = String(e.shortMessage ?? e.message ?? e).slice(0, 200);
+    console.log(`\r  Le fournisseur RPC refuse de servir l'historique : ${panne}\n`);
   }
-  for (const l of logs) {
-    mints.push({
-      block: l.blockNumber,
-      tx: l.transactionHash,
-      to: getAddress('0x' + l.topics[2].slice(26)),
-      id: Number(BigInt(l.topics[3])),
-    });
-  }
-  from = to + 1;
-  process.stdout.write(`\r  ${mints.length} pieces mintees, jusqu au bloc ${from.toLocaleString('fr')}…   `);
 }
-console.log(`\r  ${mints.length} pieces mintees au total                      \n`);
 
-if (!mints.length) {
-  console.log('  Aucun mint sur ce contrat. Rien a analyser.\n');
+/* ---- Filet de securite : la propriete, sans historique ------------------ */
+// Quand les evenements sont inaccessibles - noeud sans historique, plage
+// refusee - il reste une lecture que tout noeud sert : le proprietaire
+// actuel de chaque piece. On perd les heures et les transactions, on garde
+// la reponse a la seule question qui compte vraiment : qui detient quoi.
+if (!mints.length || has('--proprietaires')) {
+  if (!minted) {
+    console.log(`  Impossible de lire les evenements ET impossible de connaitre la`);
+    console.log(`  supply. Reessayer avec un RPC Alchemy (ALCHEMY_API_KEY dans .env.local).\n`);
+    process.exit(1);
+  }
+  if (!has('--proprietaires')) {
+    console.log(`  Aucun evenement lisible, alors que le contrat annonce ${minted} pieces.`);
+    console.log(`  On bascule sur la lecture des proprietaires actuels.\n`);
+  }
+  console.log(`Lecture des proprietaires de ${minted} pieces…`);
+  const par = new Map();
+  const LOT = 20;
+  for (let i = 0; i < minted; i += LOT) {
+    const ids = Array.from({ length: Math.min(LOT, minted - i) }, (_, k) => i + k);
+    const res = await Promise.all(ids.map((id) => lire(() => nft.ownerOf(id)).catch(() => null)));
+    res.forEach((o, k) => {
+      if (!o) return;
+      const a = getAddress(o);
+      if (!par.has(a)) par.set(a, []);
+      par.get(a).push(ids[k]);
+    });
+    process.stdout.write(`\r  ${Math.min(i + LOT, minted)} / ${minted}   `);
+  }
+  const rangs = [...par].sort((a, b) => b[1].length - a[1].length);
+  console.log(`\r  ${rangs.length} detenteurs distincts                    \n`);
+  console.log('  pieces   wallet                                       exemples');
+  for (const [addr, ids] of rangs.slice(0, Number(val('--top', '25')))) {
+    const marque = FOCUS && addr === FOCUS ? ' <<<' : '';
+    console.log(`  ${String(ids.length).padStart(6)}   ${addr}   #${ids.slice(0, 5).join(' #')}${ids.length > 5 ? ' …' : ''}${marque}`);
+  }
+  if (FOCUS) {
+    const mien = par.get(FOCUS);
+    console.log(`\n  Wallet demande  ${FOCUS}`);
+    console.log(mien ? `  ${mien.length} pieces : #${mien.join(' #')}\n`
+                     : `  Ce wallet ne detient aucune piece de ce contrat.\n`);
+  }
+  mkdirSync('kids/build', { recursive: true });
+  const f = `kids/build/proprietaires-${CH.id}${has('--v2') ? '-v2' : ''}.csv`;
+  writeFileSync(f, ['tokenId,proprietaire']
+    .concat([...par].flatMap(([a, ids]) => ids.map((id) => `${id},${a}`)).sort((x, y) => +x.split(',')[0] - +y.split(',')[0]))
+    .join('\n') + '\n');
+  console.log(`  Detail piece par piece -> ${f}\n`);
+  if (panne) {
+    console.log(`  Les heures et les transactions demandent un RPC qui sert`);
+    console.log(`  l'historique. Poser ALCHEMY_API_KEY dans .env.local puis relancer.\n`);
+  }
   process.exit(0);
 }
 
