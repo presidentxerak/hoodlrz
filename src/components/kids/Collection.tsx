@@ -19,6 +19,7 @@ import { solidityPackedKeccak256 } from "ethers";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import { KIDS, KIDS_OPENSEA_URL, kidsOpenSeaItemUrl, kidsTokenUrl } from "@/lib/kids/config";
+import { useThumbs } from "@/components/kids/useThumbs";
 
 interface Index {
   contract: string;
@@ -47,6 +48,14 @@ export default function Collection() {
   const [query, setQuery] = useState("");
   const [visible, setVisible] = useState(ITEMS_PER_PAGE);
   const [open, setOpen] = useState<number | null>(null);
+  // Vignettes nettes, peintes par le moteur a la taille de l'ecran. La
+  // planche-contact sert de premiere image, le temps que le moteur peigne.
+  const { thumb, frame } = useThumbs();
+  const [thumbSize, setThumbSize] = useState(512);
+  useEffect(() => {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    setThumbSize(Math.round(Math.min(1024, 420 * dpr)));
+  }, []);
 
   useEffect(() => {
     fetch("/kids/collection/index.json", { cache: "no-store" })
@@ -146,6 +155,7 @@ export default function Collection() {
 
   return (
     <div>
+      {frame}
       {/* Filtres, comme la galerie OG. */}
       <div className="mt-8 flex flex-wrap items-end gap-4">
         <div className="flex flex-col gap-1.5">
@@ -205,7 +215,15 @@ export default function Collection() {
             onClick={() => setOpen(id)}
             className="group flex flex-col border border-[var(--border)] bg-[var(--surface)] text-left transition-transform duration-200 hover:-translate-y-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-red"
           >
-            <div className="aspect-square w-full bg-black" style={sheetStyle(id)} aria-label={`Hoodlrz Gen Kid #${id}`} />
+            <div className="relative aspect-square w-full bg-black" style={sheetStyle(id)} aria-label={`Hoodlrz Gen Kid #${id}`}>
+              {(() => {
+                const src = thumb(id, hashOf(id), thumbSize);
+                return src ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={src} alt="" className="absolute inset-0 h-full w-full" draggable={false} />
+                ) : null;
+              })()}
+            </div>
             <div className="flex items-center justify-between p-3">
               <span className="text-xs font-bold text-foreground">#{String(id).padStart(4, "0")}</span>
               <Badge variant={tierVariant(tiers[id])}>{tiers[id]}</Badge>
