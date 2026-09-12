@@ -56,23 +56,31 @@
       "network": "Robinhood Chain",
       "explorer": "https://robinhoodchain.blockscout.com",
       "engine": "0x31c0D2f7400e987d29eEeC54EcB5228eA1194DA8",
-      "renderer": "0x17F77Da0c8aAc042349aC437D8164cB9a86c85ee",
-      "nft": "0xa01D7990ee7edaf4B9526c39afB17f4a966b0905",
+      "renderer": "0x93D0df70312Bc519226Db550934843520ff13F98",
+      "nft": "0x64Cbe00beBf0BE2BfA84b447850f5Ec98FFF5B13",
       "royaltyReceiver": "0x2606C3Ea4cFb66c467b57DEa7a2117d6905ca143",
       "reserveReceiver": "0x2606C3Ea4cFb66c467b57DEa7a2117d6905ca143",
       "artifactSha256": "0xe3c896eb39c5bbb6e1767fb84d6688a31d8fca3d5b7c9b78dba271f3088d3bca",
-      "deployedAt": "2026-09-07T09:07:16.845Z"
+      "deployedAt": "2026-09-07T09:07:16.845Z",
+      "origin": "0xa01D7990ee7edaf4B9526c39afB17f4a966b0905",
+      "rendererV1": "0x17F77Da0c8aAc042349aC437D8164cB9a86c85ee",
+      "imageBase": "https://www.hoodlrz.com/kids/img/",
+      "v2DeployedAt": "2026-09-12T07:54:02.355Z"
     },
     "46630": {
       "network": "Robinhood Chain Testnet",
       "explorer": "https://explorer.testnet.chain.robinhood.com",
       "engine": "0x31111CeD0AA9Fafe2e1fC706aF9bec4e5BCD3eCB",
-      "renderer": "0xfD415096A95eF1c5F9A0f0cB74bd83aB474A2B28",
-      "nft": "0x6Cc10D9BCfb6b6Bf27d818224B111356F2E924Be",
+      "renderer": "0x3FE70918f497EeBB9c13a1B9b48f04ff18A2cF57",
+      "nft": "0xf0FF8Ca766841f078CeBc1D66b6607A05225Cf93",
       "royaltyReceiver": "0x2606C3Ea4cFb66c467b57DEa7a2117d6905ca143",
       "reserveReceiver": "0x2606C3Ea4cFb66c467b57DEa7a2117d6905ca143",
       "artifactSha256": "0xe3c896eb39c5bbb6e1767fb84d6688a31d8fca3d5b7c9b78dba271f3088d3bca",
-      "deployedAt": "2026-09-09T07:09:12.571Z"
+      "deployedAt": "2026-09-09T07:09:12.571Z",
+      "origin": "0x6Cc10D9BCfb6b6Bf27d818224B111356F2E924Be",
+      "rendererV1": "0xfD415096A95eF1c5F9A0f0cB74bd83aB474A2B28",
+      "imageBase": "https://www.hoodlrz.com/kids/img-testnet/",
+      "v2DeployedAt": "2026-09-12T07:09:57.747Z"
     },
     "_note": "Adresses des contrats deployes, par chain ID. Ecrit par kids:deploy."
   },
